@@ -1,12 +1,11 @@
 # Project Structure
-
 We're going to use a repository pattern to accomplish this project. It should be pretty straightforward and provide nice abstractions for the frontend to use when we get there.
 
 We'll need the following tables:
 - Users
 - Recipes
 - Recipe Steps
-- Redipe Docment (PDF only)
+- Recipe Document (PDF only)
 - Ingredients
 - Comments
 - Ratings 
@@ -19,11 +18,6 @@ I'm not exactly sure how we're going to deploy this yet, I'll need to do some wo
 
 ## Data Model
 ```mermaid
-```
-```mermaid
-```
-```mermaid
-```
 erDiagram
     User ||--o{ Recipe : creates
     User ||--o{ Comment : writes
@@ -77,20 +71,19 @@ erDiagram
     }
 
     Rating {
-      string RatingID PK
-      string UserID FK
-      sting RecipeID FK
-      int RainggValue
-      datetime DateRated
+        string RatingID PK
+        string UserID FK
+        string RecipeID FK
+        int RatingValue
+        datetime DateRated
     }
 
     RecipeDocument {
-      string DocumentID PK
-      string RedipeID FK
-      string S3Key
-      string FileName
-      int FileSize
-      datetime UploadedAT
+        string DocumentID PK
+        string RecipeID FK
+        string S3Key
+        string FileName
+        int FileSize
+        datetime UploadedAt
     }
-```
 ```
