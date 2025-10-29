@@ -16,13 +16,14 @@ type Recipe struct {
 
 type CreateRecipeRequest struct {
 	Name        string
-	TimeToCook  string
-	Description string
+	TimeToCook  *string
+	Description *string
 	UserID      string
 }
 
-type UpdateRecipeRequest struct { // All optional
+type UpdateRecipeRequest struct {
 	Name        *string
 	TimeToCook  *string
 	Description *string
+	RecipeID    string
 }
