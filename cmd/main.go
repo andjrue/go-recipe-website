@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"log"
 	"recipe-website/internal/database"
 
@@ -14,7 +15,7 @@ func main() {
 	}
 
 	db := database.ConnectToPostgres()
-	defer db.Close()
+	defer db.Close(context.Background())
 
 	storage := database.NewPostgresDatabase(db)
 	_ = storage
