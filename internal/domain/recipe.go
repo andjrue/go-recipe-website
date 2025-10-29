@@ -7,7 +7,7 @@ type Recipe struct {
 	RecipeID     string
 	Name         string
 	TimeToCook   string
-	Decription   string
+	Description  string
 	UserID       string
 	DatePosted   time.Time
 	Deleted      bool
