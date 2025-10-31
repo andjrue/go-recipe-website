@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"recipe-website/internal/domain"
+	"strings"
 	"time"
 
 	"github.com/jackc/pgx/v5"
@@ -114,9 +115,46 @@ func (r *PostgresRecipeRepository) Create(ctx context.Context, req *domain.Creat
 	return recipe, nil
 }
 
-func (r *PostgresRecipeRepository) Update(ctx context.Context, req *domain.UpdateRecipeRequest) {
-	// TODO
+func (r *PostgresRecipeRepository) Update(ctx context.Context, req *domain.UpdateRecipeRequest) error {
+	setClauses := []string{}
+	args := []interface{}{}
+	argPosition := 1
 
+	if req.Name != nil {
+		setClauses = append(setClauses, fmt.Sprintf("name = $%d", argPosition))
+		args = append(args, *req.Name)
+		argPosition++
+	}
+
+	if req.TimeToCook != nil {
+		setClauses = append(setClauses, fmt.Sprintf("time_to_cook = $%d", argPosition))
+		args = append(args, *req.TimeToCook)
+		argPosition++
+	}
+
+	if req.Description != nil {
+		setClauses = append(setClauses, fmt.Sprintf("description = $%d", argPosition))
+		args = append(args, *req.Description)
+		argPosition++
+	}
+
+	q := fmt.Sprintf(
+		"UPDATE recipes SET %s WHERE id = %d",
+		strings.Join(setClauses, ", "),
+		argPosition,
+	)
+	args = append(args, req.RecipeID)
+
+	commandTag, err := r.db.Exec(ctx, q, args...)
+	if err != nil {
+		return fmt.Errorf("not able to update recipe: %v", err)
+	}
+
+	if commandTag.RowsAffected() == 0 {
+		return fmt.Errorf("no recipe updated")
+	}
+
+	return nil
 }
 
 func (r *PostgresRecipeRepository) Delete(ctx context.Context, recipeID string) error {
