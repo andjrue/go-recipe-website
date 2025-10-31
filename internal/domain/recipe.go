@@ -6,7 +6,7 @@ import "time"
 type Recipe struct {
 	RecipeID     string
 	Name         string
-	TimeToCook   string
+	TimeToCook   int
 	Description  string
 	UserID       string
 	DatePosted   time.Time
@@ -16,14 +16,14 @@ type Recipe struct {
 
 type CreateRecipeRequest struct {
 	Name        string
-	TimeToCook  *string
+	TimeToCook  *int
 	Description *string
 	UserID      string
 }
 
 type UpdateRecipeRequest struct {
 	Name        *string
-	TimeToCook  *string
+	TimeToCook  *int
 	Description *string
 	RecipeID    string
 }
