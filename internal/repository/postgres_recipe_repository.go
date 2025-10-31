@@ -103,13 +103,13 @@ func (r *PostgresRecipeRepository) Create(ctx context.Context, req *domain.Creat
 		now,
 	)
 	if err != nil {
-		return nil, fmt.Errorf("failed to create recipe", err)
+		return nil, fmt.Errorf("failed to create recipe: %v", err)
 	}
 
 	defer row.Close()
 	recipe, err := r.scanRecipe(row)
 	if err != nil {
-		return nil, fmt.Errorf("unable to scan created recipe", err)
+		return nil, fmt.Errorf("unable to scan created recipe: %v", err)
 	}
 
 	return recipe, nil
