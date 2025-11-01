@@ -160,6 +160,23 @@ func (r *PostgresRecipeRepository) Update(ctx context.Context, req *domain.Updat
 	return nil
 }
 
-func (r *PostgresRecipeRepository) Delete(ctx context.Context, recipeID string) error {
+func (r *PostgresRecipeRepository) Delete(ctx context.Context, recipeID uuid.UUID) error {
+	q := `
+		UPDATE recipes
+		SET deleted = true, last_edited_at = NOW()
+		WHERE recipe_id = $1 AND deleted = false
+	`
+
+	res, err := r.db.Exec(ctx, q, recipeID)
+	if err != nil {
+		return fmt.Errorf("unable to delete recipe: %v", err)
+	}
+
+	rows := res.RowsAffected()
+	if rows == 0 {
+		return fmt.Errorf("recipe not deleted")
+	}
+
 	return nil
+
 }
