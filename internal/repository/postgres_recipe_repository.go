@@ -7,6 +7,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
 )
 
@@ -35,7 +36,7 @@ func (r *PostgresRecipeRepository) scanRecipe(row pgx.Row) (*domain.Recipe, erro
 	return &recipe, nil
 }
 
-func (r *PostgresRecipeRepository) GetByPK(ctx context.Context, recipeID string) (*domain.Recipe, error) {
+func (r *PostgresRecipeRepository) GetByPK(ctx context.Context, recipeID uuid.UUID) (*domain.Recipe, error) {
 
 	q := ` SELECT *
 	FROM recipes
@@ -54,7 +55,7 @@ func (r *PostgresRecipeRepository) GetByPK(ctx context.Context, recipeID string)
 	return recipe, nil
 }
 
-func (r *PostgresRecipeRepository) GetByUserID(ctx context.Context, userID string) ([]domain.Recipe, error) {
+func (r *PostgresRecipeRepository) GetByUserID(ctx context.Context, userID uuid.UUID) ([]domain.Recipe, error) {
 
 	var recipes []domain.Recipe
 
@@ -88,12 +89,14 @@ func (r *PostgresRecipeRepository) GetByUserID(ctx context.Context, userID strin
 }
 
 func (r *PostgresRecipeRepository) Create(ctx context.Context, req *domain.CreateRecipeRequest) (*domain.Recipe, error) {
-	q := `INSERT INTO recipes (name, time_to_cook, description, user_id, date_posted, deleted, last_edited_at)
-		VALUES ($1, $2, $3, $4, $5, $6, $7)`
+	q := `INSERT INTO recipes (recipe_id, name, time_to_cook, description, user_id, date_posted, deleted, last_edited_at)
+		VALUES ($1, $2, $3, $4, $5, $6, $7, $8)`
 
 	now := time.Now()
+	id := uuid.New()
 
 	row, err := r.db.Query(ctx, q,
+		id,
 		req.Name,
 		req.TimeToCook,
 		req.Description,
