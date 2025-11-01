@@ -11,8 +11,8 @@ type Recipe struct {
 	RecipeID     uuid.UUID
 	UserID       uuid.UUID
 	Name         string
-	TimeToCook   int
-	Description  string
+	TimeToCook   *int
+	Description  *string
 	DatePosted   time.Time
 	Deleted      bool
 	LastEditedAt time.Time
