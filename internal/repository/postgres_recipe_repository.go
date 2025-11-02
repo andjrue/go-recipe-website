@@ -55,7 +55,7 @@ func (r *PostgresRecipeRepository) GetByPK(ctx context.Context, recipeID uuid.UU
 	return recipe, nil
 }
 
-func (r *PostgresRecipeRepository) GetByUserID(ctx context.Context, userID uuid.UUID) ([]domain.Recipe, error) {
+func (r *PostgresRecipeRepository) GetAllByUserID(ctx context.Context, userID uuid.UUID) ([]domain.Recipe, error) {
 
 	var recipes []domain.Recipe
 
