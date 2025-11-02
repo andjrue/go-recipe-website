@@ -11,12 +11,12 @@ import (
 )
 
 type RecipeService struct {
-	recipeRepo *repository.PostgresRecipeRepository
+	recipeRepo repository.RecipeRepository
 }
 
-func NewRecipeService(rr *repository.PostgresRecipeRepository) *RecipeService {
+func NewRecipeService(recipeRepo repository.RecipeRepository) *RecipeService {
 	return &RecipeService{
-		recipeRepo: rr,
+		recipeRepo: recipeRepo,
 	}
 }
 
