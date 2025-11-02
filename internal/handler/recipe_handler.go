@@ -38,13 +38,13 @@ func (h *RecipeHandler) GetByPK(w http.ResponseWriter, r *http.Request) {
 		respondError(w, http.StatusBadRequest, "invalid recipe id")
 		return
 	}
-	
+
 	recipe, err := h.RecipeService.GetByPK(r.Context(), id)
 	if err != nil {
 		respondError(w, http.StatusInternalServerError, err.Error())
 		return
 	}
-	
+
 	respondJSON(w, http.StatusOK, recipe)
 }
 
