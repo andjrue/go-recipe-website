@@ -42,7 +42,7 @@ func (s *RecipeService) validateRecipe(params domain.CreateRecipeRequest) error 
 }
 
 func (s *RecipeService) validateUpdateRecipe(params domain.UpdateRecipeRequest) error {
-	if len(*params.Name) > 100 {
+	if len(params.Name) > 100 {
 		return fmt.Errorf("recipe name cannot be longer than 100 characters")
 	}
 
