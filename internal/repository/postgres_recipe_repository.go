@@ -123,9 +123,9 @@ func (r *PostgresRecipeRepository) Update(ctx context.Context, req *domain.Updat
 	args := []interface{}{}
 	argPosition := 1
 
-	if req.Name != nil {
+	if req.Name != "" {
 		setClauses = append(setClauses, fmt.Sprintf("name = $%d", argPosition))
-		args = append(args, *req.Name)
+		args = append(args, req.Name)
 		argPosition++
 	}
 
