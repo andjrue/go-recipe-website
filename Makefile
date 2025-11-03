@@ -18,6 +18,9 @@ fmt:
 vet:
 	@go vet ./...
 
+test:
+	go test -v ./...
+
 fmt-check:
 	@if [ "$$(gofmt -s -l . | wc -l)" -gt 0 ]; then \
 		echo "Code is not formatted. Run 'make fmt'"; \
