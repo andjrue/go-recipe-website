@@ -110,7 +110,7 @@ func (s *RecipeService) Update(ctx context.Context, req *domain.UpdateRecipeRequ
 	if err != nil {
 		return fmt.Errorf("[recipe service] - unable to update recipe: %v", err)
 	}
-	
+
 	return nil
 }
 
