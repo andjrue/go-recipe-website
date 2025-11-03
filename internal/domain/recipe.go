@@ -13,7 +13,7 @@ type Recipe struct {
 	UserID       uuid.UUID `json:"user_id"`
 	Name         string    `json:"name"`
 	TimeToCook   *int      `json:"time_to_cook"`
-	Description  *string   `json:"decription"`
+	Description  *string   `json:"description"`
 	DatePosted   time.Time `json:"date_posted"`
 	Deleted      bool      `json:"deleted"`
 	LastEditedAt time.Time `json:"last_edited_at"`
@@ -22,7 +22,7 @@ type Recipe struct {
 type CreateRecipeRequest struct {
 	Name        string    `json:"name"`
 	TimeToCook  *int      `json:"time_to_cook"`
-	Description *string   `json:"decription"`
+	Description *string   `json:"description"`
 	UserID      uuid.UUID `json:"user_id"`
 }
 
@@ -31,6 +31,5 @@ type UpdateRecipeRequest struct {
 	TimeToCook  *int      `json:"time_to_cook"`
 	Description *string   `json:"description"`
 	RecipeID    uuid.UUID `json:"recipe_id"`
-	UserID uuid.UUID
-	
+	UserID      uuid.UUID `json:"user_id"`
 }
