@@ -22,8 +22,8 @@ func NewRecipeService(recipeRepo repository.RecipeRepository) *RecipeService {
 
 func (s *RecipeService) validateRecipe(params domain.CreateRecipeRequest) error {
 
-	if err := uuid.Validate(params.UserID.String()); err != nil {
-		return fmt.Errorf("user id invalid: %v", err)
+	if params.UserID == uuid.Nil {
+		return fmt.Errorf("user id is required")
 	}
 
 	if params.Name == "" {
@@ -34,20 +34,24 @@ func (s *RecipeService) validateRecipe(params domain.CreateRecipeRequest) error 
 		return fmt.Errorf("recipe name cannot be longer than 100 characters")
 	}
 
-	if *params.TimeToCook <= 0 {
+	if params.TimeToCook != nil && *params.TimeToCook <= 0 {
 		return fmt.Errorf("time to cook must be greater than 0")
 	}
 
 	return nil
 }
 
-func (s *RecipeService) validateUpdateRecipe(params domain.UpdateRecipeRequest) error {
+func (s *RecipeService) validateUpdateRecipe(params domain.UpdateRecipeRequest, recipe *domain.Recipe) error {
 	if len(params.Name) > 100 {
 		return fmt.Errorf("recipe name cannot be longer than 100 characters")
 	}
 
-	if err := uuid.Validate(params.RecipeID.String()); err != nil {
-		return fmt.Errorf("uuid invalid: %v", err)
+	if params.RecipeID == uuid.Nil {
+		return fmt.Errorf("recipe id is required")
+	}
+
+	if params.UserID != recipe.UserID {
+		return fmt.Errorf("user id must match existing recipe")
 	}
 
 	return nil
@@ -93,7 +97,12 @@ func (s *RecipeService) GetAllByUserID(ctx context.Context, userID uuid.UUID) ([
 }
 
 func (s *RecipeService) Update(ctx context.Context, req *domain.UpdateRecipeRequest) (*domain.Recipe, error) {
-	if err := s.validateUpdateRecipe(*req); err != nil {
+	currentRecipe, err := s.GetByPK(ctx, req.RecipeID)
+	if err != nil {
+		return nil, fmt.Errorf("cannot fetch recipe to update: %w", err)
+	}
+
+	if err := s.validateUpdateRecipe(*req, currentRecipe); err != nil {
 		return nil, fmt.Errorf("cannot update recipe: %v", err)
 	}
 

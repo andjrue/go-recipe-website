@@ -29,6 +29,8 @@ type CreateRecipeRequest struct {
 type UpdateRecipeRequest struct {
 	Name        string    `json:"name"`
 	TimeToCook  *int      `json:"time_to_cook"`
-	Description *string   `json:"decription"`
+	Description *string   `json:"description"`
 	RecipeID    uuid.UUID `json:"recipe_id"`
+	UserID uuid.UUID
+	
 }
