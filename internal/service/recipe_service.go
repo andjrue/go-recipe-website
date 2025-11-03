@@ -57,12 +57,12 @@ func (s *RecipeService) validateUpdateRecipe(params domain.UpdateRecipeRequest, 
 	return nil
 }
 
-func (s *RecipeService) Create(ctx context.Context, req domain.CreateRecipeRequest) (*domain.Recipe, error) {
-	if err := s.validateRecipe(req); err != nil {
+func (s *RecipeService) Create(ctx context.Context, req *domain.CreateRecipeRequest) (*domain.Recipe, error) {
+	if err := s.validateRecipe(*req); err != nil {
 		return nil, fmt.Errorf("recipe create validation failed: %w", err)
 	}
 
-	recipe, err := s.Create(ctx, req)
+	recipe, err := s.recipeRepo.Create(ctx, req)
 	if err != nil {
 		return nil, fmt.Errorf("[recipe service] - failed to create recipe: %w", err)
 	}
@@ -75,7 +75,7 @@ func (s *RecipeService) GetByPK(ctx context.Context, recipeID uuid.UUID) (*domai
 		return nil, fmt.Errorf("recipe id malformed, %v", err)
 	}
 
-	recipe, err := s.GetByPK(ctx, recipeID)
+	recipe, err := s.recipeRepo.GetByPK(ctx, recipeID)
 	if err != nil {
 		return nil, fmt.Errorf("[recipe service] - failed to fetch recipe: %w", err)
 	}
@@ -88,7 +88,7 @@ func (s *RecipeService) GetAllByUserID(ctx context.Context, userID uuid.UUID) ([
 		return nil, fmt.Errorf("recipe id is required, GetByID")
 	}
 
-	recipes, err := s.GetAllByUserID(ctx, userID)
+	recipes, err := s.recipeRepo.GetAllByUserID(ctx, userID)
 	if err != nil {
 		return nil, fmt.Errorf("[recipe service] - unable to fetch all for user: %v", err)
 	}
@@ -96,22 +96,22 @@ func (s *RecipeService) GetAllByUserID(ctx context.Context, userID uuid.UUID) ([
 	return recipes, nil
 }
 
-func (s *RecipeService) Update(ctx context.Context, req *domain.UpdateRecipeRequest) (*domain.Recipe, error) {
+func (s *RecipeService) Update(ctx context.Context, req *domain.UpdateRecipeRequest) error {
 	currentRecipe, err := s.GetByPK(ctx, req.RecipeID)
 	if err != nil {
-		return nil, fmt.Errorf("cannot fetch recipe to update: %w", err)
+		return fmt.Errorf("cannot fetch recipe to update: %w", err)
 	}
 
 	if err := s.validateUpdateRecipe(*req, currentRecipe); err != nil {
-		return nil, fmt.Errorf("cannot update recipe: %v", err)
+		return fmt.Errorf("cannot update recipe: %v", err)
 	}
 
-	update, err := s.Update(ctx, req)
+	err = s.recipeRepo.Update(ctx, req)
 	if err != nil {
-		return nil, fmt.Errorf("[recipe service] - unable to update recipe: %v", err)
+		return fmt.Errorf("[recipe service] - unable to update recipe: %v", err)
 	}
-
-	return update, nil
+	
+	return nil
 }
 
 func (s *RecipeService) Delete(ctx context.Context, recipeID uuid.UUID) error {
@@ -119,7 +119,7 @@ func (s *RecipeService) Delete(ctx context.Context, recipeID uuid.UUID) error {
 		return fmt.Errorf("recipe ID is invalid: %v", err)
 	}
 
-	if err := s.Delete(ctx, recipeID); err != nil {
+	if err := s.recipeRepo.Delete(ctx, recipeID); err != nil {
 		return fmt.Errorf("error deleting recipe: %v", err)
 	}
 

@@ -72,4 +72,3 @@ func TestValidateRecipe(t *testing.T) {
 		}
 	})
 }
-
