@@ -1,0 +1,17 @@
+package handler
+
+import (
+	"encoding/json"
+	"net/http"
+)
+
+func respondJSON(w http.ResponseWriter, status int, data interface{}) {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(status)
+	json.NewEncoder(w).Encode(data)
+}
+
+// TODO: Set up custom error handling for this. Is and As can get us a long way.
+func respondError(w http.ResponseWriter, status int, message string) {
+	respondJSON(w, status, map[string]string{"error": message})
+}
