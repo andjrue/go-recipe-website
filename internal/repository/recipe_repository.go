@@ -6,7 +6,7 @@ import (
 	"recipe-website/internal/domain"
 
 	"github.com/google/uuid"
-	"github.com/jackc/pgx/v5"
+	"github.com/jackc/pgx/v5/pgxpool"
 )
 
 type RecipeRepository interface {
@@ -20,7 +20,7 @@ type RecipeRepository interface {
 	// perm delete -- remove recipe from db
 }
 
-func NewRecipeRepository(db *pgx.Conn) RecipeRepository {
+func NewRecipeRepository(db *pgxpool.Pool) RecipeRepository {
 	return &PostgresRecipeRepository{
 		db: db,
 	}

@@ -1,4 +1,4 @@
-// Package application stores all of our applications depedencies in one central location
+// Package application stores all of our applications dependencies in one central location
 package application
 
 import (
@@ -12,11 +12,11 @@ import (
 	"recipe-website/internal/service"
 	"time"
 
-	"github.com/jackc/pgx/v5"
+	"github.com/jackc/pgx/v5/pgxpool"
 )
 
 type App struct {
-	db     *pgx.Conn
+	db     *pgxpool.Pool
 	router http.Handler
 }
 
@@ -44,7 +44,7 @@ func (a *App) Start(ctx context.Context) error {
 	defer cancel()
 	
 	go func() {
-		fmt.Println("Server starting on localhost:3000\n")
+		fmt.Printf("Server starting on localhost:3000\n")
 		if err := http.ListenAndServe(server.Addr, server.Handler); err != nil && err != http.ErrServerClosed {
 			fmt.Printf("Server failed to listen: %w", err)
 			cancel()
@@ -61,9 +61,7 @@ func (a *App) Start(ctx context.Context) error {
 		return fmt.Errorf("server shutdown failed: %w", err)
 	}
 
-	if err := a.db.Close(context.Background()); err != nil {
-		return fmt.Errorf("database close failed: %w", err)
-	}
+	a.db.Close()
 
 	fmt.Println("Server stopped.")
 

@@ -7,20 +7,20 @@ import (
 	"log"
 	"os"
 
-	"github.com/jackc/pgx/v5"
+	"github.com/jackc/pgx/v5/pgxpool"
 )
 
 type Storage struct {
-	db *pgx.Conn
+	db *pgxpool.Pool
 }
 
-func NewPostgresDatabase(db *pgx.Conn) *Storage {
+func NewPostgresDatabase(db *pgxpool.Pool) *Storage {
 	return &Storage{db: db}
 }
 
-func ConnectToPostgres() *pgx.Conn {
+func ConnectToPostgres() *pgxpool.Pool {
 
-	db, err := pgx.Connect(context.Background(), os.Getenv("DB_URL"))
+	db, err := pgxpool.New(context.Background(), os.Getenv("DB_URL"))
 	if err != nil {
 		log.Fatal("Unable to connect to postgres: ", err)
 	}

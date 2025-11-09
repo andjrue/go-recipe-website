@@ -9,10 +9,11 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
+	"github.com/jackc/pgx/v5/pgxpool"
 )
 
 type PostgresRecipeRepository struct {
-	db *pgx.Conn
+	db *pgxpool.Pool
 }
 
 func (r *PostgresRecipeRepository) scanRecipe(row pgx.Row) (*domain.Recipe, error) {
