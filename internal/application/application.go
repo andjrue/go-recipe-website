@@ -5,6 +5,12 @@ import (
 	"context"
 	"fmt"
 	"net/http"
+	"recipe-website/internal/database"
+	"recipe-website/internal/handler"
+	"recipe-website/internal/repository"
+	"recipe-website/internal/router"
+	"recipe-website/internal/service"
+	"time"
 
 	"github.com/jackc/pgx/v5"
 )
@@ -15,8 +21,16 @@ type App struct {
 }
 
 func New() (*App, error) {
-	return nil, nil
-	// Eventually this will house all of our dependencies
+	db := database.ConnectToPostgres()
+	repos := repository.SetRepositories(db)
+	service := service.SetServices(repos)
+	handlers := handler.NewHandler(service)
+	r := router.SetupRoutes(handlers)
+	
+	return &App{
+		db: db,
+		router: r,
+	}, nil
 
 }
 
@@ -26,10 +40,32 @@ func (a *App) Start(ctx context.Context) error {
 		Handler: a.router,
 	}
 
-	err := server.ListenAndServe()
-	if err != nil {
-		return fmt.Errorf("unable to start server: %w", err)
+	ctx, cancel := context.WithCancel(ctx)
+	defer cancel()
+	
+	go func() {
+		fmt.Println("Server starting on localhost:3000\n")
+		if err := http.ListenAndServe(server.Addr, server.Handler); err != nil && err != http.ErrServerClosed {
+			fmt.Printf("Server failed to listen: %w", err)
+			cancel()
+		}
+	} ()
+	
+	<-ctx.Done()
+	fmt.Println("\nShutting down the server gracefully")
+	
+	shutdownCtx, shutdownCancel := context.WithTimeout(context.Background(), 5 * time.Second)
+	defer shutdownCancel()
+	
+	if err := server.Shutdown(shutdownCtx); err != nil {
+		return fmt.Errorf("server shutdown failed: %w", err)
 	}
+
+	if err := a.db.Close(context.Background()); err != nil {
+		return fmt.Errorf("database close failed: %w", err)
+	}
+
+	fmt.Println("Server stopped.")
 
 	return nil
 }
