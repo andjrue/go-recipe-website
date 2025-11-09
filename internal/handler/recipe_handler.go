@@ -52,23 +52,23 @@ func (h *RecipeHandler) GetByPK(w http.ResponseWriter, r *http.Request) {
 // Create - POST /recipes
 func (h *RecipeHandler) Create(w http.ResponseWriter, r *http.Request) {
 	var req domain.CreateRecipeRequest
-	
+
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		respondError(w, http.StatusBadRequest, "invalid request body")
 		return
 	}
-	
+
 	if req.Name == "" || req.UserID == uuid.Nil {
 		respondError(w, http.StatusBadRequest, "missing required fields: name and user_id")
 		return
 	}
-	
+
 	recipe, err := h.RecipeService.Create(r.Context(), &req)
 	if err != nil {
 		respondError(w, http.StatusInternalServerError, "failed to create recipe")
 		return
 	}
-	
+
 	respondJSON(w, http.StatusCreated, recipe)
 }
 
@@ -78,7 +78,7 @@ func respondJSON(w http.ResponseWriter, status int, data interface{}) {
 	json.NewEncoder(w).Encode(data)
 }
 
-// TODO: Set up custom error handling for this. Is and As can get us a long way. 
+// TODO: Set up custom error handling for this. Is and As can get us a long way.
 func respondError(w http.ResponseWriter, status int, message string) {
 	respondJSON(w, status, map[string]string{"error": message})
 }

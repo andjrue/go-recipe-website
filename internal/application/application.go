@@ -26,9 +26,9 @@ func New() (*App, error) {
 	service := service.SetServices(repos)
 	handlers := handler.NewHandler(service)
 	r := router.SetupRoutes(handlers)
-	
+
 	return &App{
-		db: db,
+		db:     db,
 		router: r,
 	}, nil
 
@@ -42,21 +42,21 @@ func (a *App) Start(ctx context.Context) error {
 
 	ctx, cancel := context.WithCancel(ctx)
 	defer cancel()
-	
+
 	go func() {
 		fmt.Printf("Server starting on localhost:3000\n")
 		if err := http.ListenAndServe(server.Addr, server.Handler); err != nil && err != http.ErrServerClosed {
-			fmt.Printf("Server failed to listen: %w", err)
+			fmt.Printf("Server failed to listen: %v", err)
 			cancel()
 		}
-	} ()
-	
+	}()
+
 	<-ctx.Done()
 	fmt.Println("\nShutting down the server gracefully")
-	
-	shutdownCtx, shutdownCancel := context.WithTimeout(context.Background(), 5 * time.Second)
+
+	shutdownCtx, shutdownCancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer shutdownCancel()
-	
+
 	if err := server.Shutdown(shutdownCtx); err != nil {
 		return fmt.Errorf("server shutdown failed: %w", err)
 	}
