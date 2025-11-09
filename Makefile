@@ -7,6 +7,7 @@ build:
 	@go build -o bin/$(APP_NAME) ./cmd
 
 run:
+	@echo "Starting server w/ db url: DB_URL=${DB_URL}"
 	@go run ./cmd main.go
 
 tidy:

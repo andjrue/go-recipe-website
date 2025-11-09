@@ -2,21 +2,26 @@ package main
 
 import (
 	"context"
-	"log"
-	"recipe-website/internal/database"
-
-	"github.com/joho/godotenv"
+	"fmt"
+	"os"
+	"os/signal"
+	"recipe-website/internal/application"
+	"syscall"
 )
 
 func main() {
 
-	if err := godotenv.Load(); err != nil {
-		log.Fatal("error loading env file")
+	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
+	defer stop()
+	
+	app, err := application.New()
+	if err != nil {
+		panic(err)
+	}
+	
+	if err := app.Start(ctx); err != nil {
+		panic(err)
 	}
 
-	db := database.ConnectToPostgres()
-	defer db.Close(context.Background())
-
-	storage := database.NewPostgresDatabase(db)
-	_ = storage
+	fmt.Println("Application shut down gracefully")
 }
