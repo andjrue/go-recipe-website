@@ -2,38 +2,27 @@
 package database
 
 import (
-	"database/sql"
+	"context"
 	"fmt"
 	"log"
 	"os"
 
-	_ "github.com/lib/pq"
+	"github.com/jackc/pgx/v5/pgxpool"
 )
 
 type Storage struct {
-	db *sql.DB
+	db *pgxpool.Pool
 }
 
-func NewPostgresDatabase(db *sql.DB) *Storage {
+func NewPostgresDatabase(db *pgxpool.Pool) *Storage {
 	return &Storage{db: db}
 }
 
-func ConnectToPostgres() *sql.DB {
-	connStr := fmt.Sprintf("host=%s port=%s user=%s password=%s dbname=%s sslmode=%s",
-		os.Getenv("DB_HOST"),
-		os.Getenv("DB_PORT"),
-		os.Getenv("DB_USER"),
-		os.Getenv("DB_PASSWORD"),
-		os.Getenv("DB_NAME"),
-		os.Getenv("DB_SSLMODE"),
-	)
-	db, err := sql.Open("postgres", connStr)
-	if err != nil {
-		log.Fatal(err)
-	}
+func ConnectToPostgres() *pgxpool.Pool {
 
-	if err := db.Ping(); err != nil {
-		log.Fatal(err)
+	db, err := pgxpool.New(context.Background(), os.Getenv("DB_URL"))
+	if err != nil {
+		log.Fatal("Unable to connect to postgres: ", err)
 	}
 
 	fmt.Println("Successfully connected to postgres")

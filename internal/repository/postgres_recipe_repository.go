@@ -1,0 +1,180 @@
+package repository
+
+import (
+	"context"
+	"fmt"
+	"recipe-website/internal/domain"
+	"strings"
+	"time"
+
+	"github.com/google/uuid"
+	"github.com/jackc/pgx/v5"
+	"github.com/jackc/pgx/v5/pgxpool"
+)
+
+type PostgresRecipeRepository struct {
+	db *pgxpool.Pool
+}
+
+func (r *PostgresRecipeRepository) scanRecipe(row pgx.Row) (*domain.Recipe, error) {
+	var recipe domain.Recipe
+
+	err := row.Scan(
+		&recipe.RecipeID,
+		&recipe.UserID,
+		&recipe.Name,
+		&recipe.TimeToCook,
+		&recipe.Description,
+		&recipe.DatePosted,
+		&recipe.LastEditedAt,
+		&recipe.Deleted,
+	)
+
+	if err != nil {
+		return nil, err
+	}
+
+	return &recipe, nil
+}
+
+func (r *PostgresRecipeRepository) GetByPK(ctx context.Context, recipeID uuid.UUID) (*domain.Recipe, error) {
+
+	q := ` SELECT *
+	FROM recipes
+	WHERE recipe_id = $1 AND deleted = false
+	`
+
+	row := r.db.QueryRow(ctx, q, recipeID)
+	recipe, err := r.scanRecipe(row)
+
+	if err != nil {
+		if err == pgx.ErrNoRows {
+			return nil, domain.ErrNotFound
+		}
+		return nil, err
+	}
+	return recipe, nil
+}
+
+func (r *PostgresRecipeRepository) GetAllByUserID(ctx context.Context, userID uuid.UUID) ([]domain.Recipe, error) {
+
+	var recipes []domain.Recipe
+
+	q := `SELECT *
+	FROM recipes
+	WHERE user_id = $1 AND deleted = false
+	`
+
+	rows, err := r.db.Query(ctx, q, userID)
+	if err != nil {
+		return nil, err
+	}
+
+	defer rows.Close()
+
+	for rows.Next() {
+		recipe, err := r.scanRecipe(rows)
+		if err != nil {
+			return nil, fmt.Errorf("failed to scan rows: %v", err)
+		}
+
+		recipes = append(recipes, *recipe)
+	}
+
+	if err := rows.Err(); err != nil {
+		return nil, fmt.Errorf("error iterating through rows: %v", err)
+	}
+
+	return recipes, nil
+
+}
+
+func (r *PostgresRecipeRepository) Create(ctx context.Context, req *domain.CreateRecipeRequest) (*domain.Recipe, error) {
+	q := `INSERT INTO recipes (recipe_id, user_id, name, time_to_cook, description, date_posted, last_edited_at, deleted)
+		VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+		RETURNING recipe_id, user_id, name, time_to_cook, description, date_posted, last_edited_at, deleted`
+
+	now := time.Now()
+	id := uuid.New()
+
+	row := r.db.QueryRow(ctx, q,
+		id,
+		req.UserID,
+		req.Name,
+		req.TimeToCook,
+		req.Description,
+		now,
+		now,
+		false,
+	)
+
+	recipe, err := r.scanRecipe(row)
+	if err != nil {
+		return nil, fmt.Errorf("unable to scan created recipe: %v", err)
+	}
+
+	return recipe, nil
+}
+
+func (r *PostgresRecipeRepository) Update(ctx context.Context, req *domain.UpdateRecipeRequest) error {
+	setClauses := []string{}
+	args := []interface{}{}
+	argPosition := 1
+
+	if req.Name != "" {
+		setClauses = append(setClauses, fmt.Sprintf("name = $%d", argPosition))
+		args = append(args, req.Name)
+		argPosition++
+	}
+
+	if req.TimeToCook != nil {
+		setClauses = append(setClauses, fmt.Sprintf("time_to_cook = $%d", argPosition))
+		args = append(args, *req.TimeToCook)
+		argPosition++
+	}
+
+	if req.Description != nil {
+		setClauses = append(setClauses, fmt.Sprintf("description = $%d", argPosition))
+		args = append(args, *req.Description)
+		argPosition++
+	}
+
+	q := fmt.Sprintf(
+		"UPDATE recipes SET %s WHERE id = %d",
+		strings.Join(setClauses, ", "),
+		argPosition,
+	)
+	args = append(args, req.RecipeID)
+
+	commandTag, err := r.db.Exec(ctx, q, args...)
+	if err != nil {
+		return fmt.Errorf("not able to update recipe: %v", err)
+	}
+
+	if commandTag.RowsAffected() == 0 {
+		return domain.ErrNotFound
+	}
+
+	return nil
+}
+
+func (r *PostgresRecipeRepository) Delete(ctx context.Context, recipeID uuid.UUID) error {
+	q := `
+		UPDATE recipes
+		SET deleted = true, last_edited_at = NOW()
+		WHERE recipe_id = $1 AND deleted = false
+	`
+
+	res, err := r.db.Exec(ctx, q, recipeID)
+	if err != nil {
+		return fmt.Errorf("unable to delete recipe: %v", err)
+	}
+
+	rows := res.RowsAffected()
+	if rows == 0 {
+		return fmt.Errorf("recipe not deleted")
+	}
+
+	return nil
+
+}
