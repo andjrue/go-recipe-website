@@ -32,7 +32,7 @@ func respondError(w http.ResponseWriter, err error) {
 	default:
 		status = http.StatusInternalServerError
 		message = domain.ErrUnexpected.Error()
-		log.Printf("unexpected error: %w", err)
+		log.Printf("unexpected error: %v", err)
 	}
 
 	respondJSON(w, status, map[string]string{"error": message})
