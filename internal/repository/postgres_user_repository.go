@@ -18,7 +18,7 @@ type PostgresUserRepository struct {
 
 func (r *PostgresUserRepository) scanUser(row pgx.Row) (*domain.User, error) {
 	var user domain.User
-	
+
 	err := row.Scan(
 		&user.UserID,
 		&user.HashedPassword,
@@ -29,7 +29,7 @@ func (r *PostgresUserRepository) scanUser(row pgx.Row) (*domain.User, error) {
 	if err != nil {
 		return nil, err
 	}
-	
+
 	return &user, nil
 }
 
@@ -43,7 +43,7 @@ func (r *PostgresUserRepository) GetByPK(ctx context.Context, userID uuid.UUID) 
 	FROM users
 	WHERE user_id = $1
 	`
-	
+
 	row := r.db.QueryRow(ctx, q, userID)
 	user, err := r.scanUser(row)
 	if err != nil {
@@ -52,24 +52,24 @@ func (r *PostgresUserRepository) GetByPK(ctx context.Context, userID uuid.UUID) 
 		}
 		return nil, err
 	}
-	
-	return user, nil	
+
+	return user, nil
 }
 
-func (r *PostgresUserRepository) Create(ctx context.Context, req *domain.CreateUserRequest)	(*domain.User, error) {
+func (r *PostgresUserRepository) Create(ctx context.Context, req *domain.CreateUserRequest) (*domain.User, error) {
 	hashedPassword, err := r.hashPassword(req.Password)
 	if err != nil {
 		return nil, fmt.Errorf("unable to hash pass: %w", err)
 	}
-	
+
 	q := `INSERT INTO users (user_id, hashed_password, email, alias, date_joined)
 	VALUES ($1, $2, $3, $4, $5)
 	RETURNING user_id, hashed_password, email, alias, date_joined`
-	
+
 	now := time.Now()
 	id := uuid.New()
-	
-	row:= r.db.QueryRow(ctx, q, 
+
+	row := r.db.QueryRow(ctx, q,
 		id,
 		hashedPassword,
 		req.Email,
@@ -81,6 +81,6 @@ func (r *PostgresUserRepository) Create(ctx context.Context, req *domain.CreateU
 	if err != nil {
 		return nil, fmt.Errorf("unable to scan created user: %w", err)
 	}
-	
-	return user, nil 
+
+	return user, nil
 }

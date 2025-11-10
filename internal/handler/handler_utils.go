@@ -18,22 +18,22 @@ func respondJSON(w http.ResponseWriter, status int, data interface{}) {
 func respondError(w http.ResponseWriter, err error) {
 	var status int
 	var message string
-	
+
 	switch {
-		case errors.Is(err, domain.ErrNotFound):
-			status = http.StatusNotFound
-			message = domain.ErrNotFound.Error()
-		case errors.Is(err, domain.ErrValidation): 
-			status = http.StatusBadRequest
-			message = err.Error() // This will be slightly different, we want to return full messages when we have bad requests
-		case errors.Is(err, domain.ErrDuplicateEntry): 
-			status = http.StatusConflict
-			message = domain.ErrDuplicateEntry.Error()
-		default: 
-			status = http.StatusInternalServerError
-			message = domain.ErrUnexpected.Error()
-			log.Printf("unexpected error: %w", err)
+	case errors.Is(err, domain.ErrNotFound):
+		status = http.StatusNotFound
+		message = domain.ErrNotFound.Error()
+	case errors.Is(err, domain.ErrValidation):
+		status = http.StatusBadRequest
+		message = err.Error() // This will be slightly different, we want to return full messages when we have bad requests
+	case errors.Is(err, domain.ErrDuplicateEntry):
+		status = http.StatusConflict
+		message = domain.ErrDuplicateEntry.Error()
+	default:
+		status = http.StatusInternalServerError
+		message = domain.ErrUnexpected.Error()
+		log.Printf("unexpected error: %w", err)
 	}
-	
+
 	respondJSON(w, status, map[string]string{"error": message})
 }

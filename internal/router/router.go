@@ -20,7 +20,7 @@ func SetupRoutes(h *handler.Handlers) *chi.Mux {
 			r.Post("/", h.Recipe.Create)
 			r.Get("/{id}", h.Recipe.GetByPK)
 		})
-		
+
 		r.Route("/users", func(r chi.Router) {
 			r.Post("/", h.User.Create)
 		})

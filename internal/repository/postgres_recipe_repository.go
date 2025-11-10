@@ -97,7 +97,7 @@ func (r *PostgresRecipeRepository) Create(ctx context.Context, req *domain.Creat
 	now := time.Now()
 	id := uuid.New()
 
-	row:= r.db.QueryRow(ctx, q,
+	row := r.db.QueryRow(ctx, q,
 		id,
 		req.UserID,
 		req.Name,

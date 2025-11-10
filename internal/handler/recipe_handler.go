@@ -67,4 +67,3 @@ func (h *RecipeHandler) Create(w http.ResponseWriter, r *http.Request) {
 
 	respondJSON(w, http.StatusCreated, recipe)
 }
-

@@ -19,21 +19,21 @@ func NewUserService(ur repository.UserRepository) *UserService {
 }
 
 func (s *UserService) validateAlias(a string) error {
-	
+
 	if a == "" {
 		return fmt.Errorf("alias is required for user creation: %w", domain.ErrValidation)
 	}
-	
+
 	if len(a) > 25 || len(a) < 4 {
 		return fmt.Errorf("alias must be between 4 and 25 characters: %w", domain.ErrValidation)
 	}
-	
+
 	for _, r := range a {
 		if !unicode.IsLetter(r) && !unicode.IsNumber(r) {
 			return fmt.Errorf("special characters are not allowed in alias: %w", domain.ErrValidation)
 		}
 	}
-	
+
 	return nil
 }
 
@@ -41,15 +41,15 @@ func (s *UserService) validateCreateUser(params domain.CreateUserRequest) error 
 	if err := s.validateAlias(params.Alias); err != nil {
 		return fmt.Errorf("alias invalid: %w", err)
 	}
-	
+
 	if params.Email == "" {
 		return fmt.Errorf("email required for user creation: %w", domain.ErrValidation)
 	}
-	
+
 	if params.Password == "" {
 		return fmt.Errorf("password required for user creation: %w", domain.ErrValidation)
 	}
-	
+
 	return nil
 }
 
@@ -57,11 +57,11 @@ func (s *UserService) CreateUser(ctx context.Context, req *domain.CreateUserRequ
 	if err := s.validateCreateUser(*req); err != nil {
 		return nil, err
 	}
-	
+
 	recipe, err := s.ur.Create(ctx, req)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create user: %w", err)
 	}
-	
+
 	return recipe, nil
 }

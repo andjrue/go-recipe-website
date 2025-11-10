@@ -6,12 +6,12 @@ import (
 
 type Repositories struct {
 	Recipe RecipeRepository
-	User UserRepository
+	User   UserRepository
 }
 
 func SetRepositories(db *pgxpool.Pool) *Repositories {
 	return &Repositories{
 		Recipe: NewRecipeRepository(db),
-		User: NewUserRepository(db),
+		User:   NewUserRepository(db),
 	}
 }
