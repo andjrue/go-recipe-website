@@ -3,6 +3,7 @@ package handler
 
 import (
 	"encoding/json"
+	"fmt"
 	"net/http"
 	"recipe-website/internal/domain"
 	"recipe-website/internal/service"
@@ -36,13 +37,13 @@ func NewRecipeHandler(recipeService *service.RecipeService) *RecipeHandler {
 func (h *RecipeHandler) GetByPK(w http.ResponseWriter, r *http.Request) {
 	id, err := uuid.Parse(chi.URLParam(r, "id"))
 	if err != nil {
-		respondError(w, http.StatusBadRequest, "invalid recipe id")
+		respondError(w, fmt.Errorf("recipe id is malformed: %w", domain.ErrValidation))
 		return
 	}
 
 	recipe, err := h.RecipeService.GetByPK(r.Context(), id)
 	if err != nil {
-		respondError(w, http.StatusInternalServerError, err.Error())
+		respondError(w, err)
 		return
 	}
 
@@ -54,18 +55,13 @@ func (h *RecipeHandler) Create(w http.ResponseWriter, r *http.Request) {
 	var req domain.CreateRecipeRequest
 
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		respondError(w, http.StatusBadRequest, "invalid request body")
-		return
-	}
-
-	if req.Name == "" || req.UserID == uuid.Nil {
-		respondError(w, http.StatusBadRequest, "missing required fields: name and user_id")
+		respondError(w, fmt.Errorf("invalid request body: %w", domain.ErrValidation))
 		return
 	}
 
 	recipe, err := h.RecipeService.Create(r.Context(), &req)
 	if err != nil {
-		respondError(w, http.StatusInternalServerError, "failed to create recipe")
+		respondError(w, err)
 		return
 	}
 

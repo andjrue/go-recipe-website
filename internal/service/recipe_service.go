@@ -23,19 +23,19 @@ func NewRecipeService(recipeRepo repository.RecipeRepository) *RecipeService {
 func (s *RecipeService) validateRecipe(params domain.CreateRecipeRequest) error {
 
 	if params.UserID == uuid.Nil {
-		return fmt.Errorf("user id is required")
+		return fmt.Errorf("user id is required: %w", domain.ErrValidation)
 	}
 
 	if params.Name == "" {
-		return fmt.Errorf("recipe name is required")
+		return fmt.Errorf("recipe name is required: %w", domain.ErrValidation)
 	}
 
 	if len(params.Name) > 100 {
-		return fmt.Errorf("recipe name cannot be longer than 100 characters")
+		return fmt.Errorf("recipe name cannot be longer than 100 characters: %w", domain.ErrValidation)
 	}
 
 	if params.TimeToCook != nil && *params.TimeToCook <= 0 {
-		return fmt.Errorf("time to cook must be greater than 0")
+		return fmt.Errorf("time to cook must be greater than 0: %w", domain.ErrValidation)
 	}
 
 	return nil
@@ -43,15 +43,15 @@ func (s *RecipeService) validateRecipe(params domain.CreateRecipeRequest) error 
 
 func (s *RecipeService) validateUpdateRecipe(params domain.UpdateRecipeRequest, recipe *domain.Recipe) error {
 	if len(params.Name) > 100 {
-		return fmt.Errorf("recipe name cannot be longer than 100 characters")
+		return fmt.Errorf("recipe name cannot be longer than 100 characters: %w", domain.ErrValidation)
 	}
 
 	if params.RecipeID == uuid.Nil {
-		return fmt.Errorf("recipe id is required")
+		return fmt.Errorf("recipe id is required: %w", domain.ErrValidation)
 	}
 
 	if params.UserID != recipe.UserID {
-		return fmt.Errorf("user id must match existing recipe")
+		return fmt.Errorf("user id must match existing recipe: %w", domain.ErrValidation)
 	}
 
 	return nil
@@ -59,12 +59,12 @@ func (s *RecipeService) validateUpdateRecipe(params domain.UpdateRecipeRequest, 
 
 func (s *RecipeService) Create(ctx context.Context, req *domain.CreateRecipeRequest) (*domain.Recipe, error) {
 	if err := s.validateRecipe(*req); err != nil {
-		return nil, fmt.Errorf("recipe create validation failed: %w", err)
+		return nil, err
 	}
 
 	recipe, err := s.recipeRepo.Create(ctx, req)
 	if err != nil {
-		return nil, fmt.Errorf("[recipe service] - failed to create recipe: %w", err)
+		return nil, fmt.Errorf("failed to create recipe: %w", err)
 	}
 
 	return recipe, nil

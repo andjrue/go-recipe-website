@@ -21,13 +21,13 @@ func (r *PostgresRecipeRepository) scanRecipe(row pgx.Row) (*domain.Recipe, erro
 
 	err := row.Scan(
 		&recipe.RecipeID,
-		&recipe.DatePosted,
+		&recipe.UserID,
+		&recipe.Name,
+		&recipe.TimeToCook,
 		&recipe.Description,
 		&recipe.DatePosted,
 		&recipe.LastEditedAt,
-		&recipe.Name,
-		&recipe.TimeToCook,
-		&recipe.UserID,
+		&recipe.Deleted,
 	)
 
 	if err != nil {
@@ -49,7 +49,7 @@ func (r *PostgresRecipeRepository) GetByPK(ctx context.Context, recipeID uuid.UU
 
 	if err != nil {
 		if err == pgx.ErrNoRows {
-			return nil, fmt.Errorf("recipe not found: %v", err)
+			return nil, domain.ErrNotFound
 		}
 		return nil, err
 	}
@@ -90,27 +90,24 @@ func (r *PostgresRecipeRepository) GetAllByUserID(ctx context.Context, userID uu
 }
 
 func (r *PostgresRecipeRepository) Create(ctx context.Context, req *domain.CreateRecipeRequest) (*domain.Recipe, error) {
-	q := `INSERT INTO recipes (recipe_id, name, time_to_cook, description, user_id, date_posted, deleted, last_edited_at)
-		VALUES ($1, $2, $3, $4, $5, $6, $7, $8)`
+	q := `INSERT INTO recipes (recipe_id, user_id, name, time_to_cook, description, date_posted, last_edited_at, deleted)
+		VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+		RETURNING recipe_id, user_id, name, time_to_cook, description, date_posted, last_edited_at, deleted`
 
 	now := time.Now()
 	id := uuid.New()
 
-	row, err := r.db.Query(ctx, q,
+	row:= r.db.QueryRow(ctx, q,
 		id,
+		req.UserID,
 		req.Name,
 		req.TimeToCook,
 		req.Description,
-		req.UserID,
+		now,
 		now,
 		false,
-		now,
 	)
-	if err != nil {
-		return nil, fmt.Errorf("failed to create recipe: %v", err)
-	}
 
-	defer row.Close()
 	recipe, err := r.scanRecipe(row)
 	if err != nil {
 		return nil, fmt.Errorf("unable to scan created recipe: %v", err)
@@ -155,7 +152,7 @@ func (r *PostgresRecipeRepository) Update(ctx context.Context, req *domain.Updat
 	}
 
 	if commandTag.RowsAffected() == 0 {
-		return fmt.Errorf("no recipe updated")
+		return domain.ErrNotFound
 	}
 
 	return nil

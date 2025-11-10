@@ -21,9 +21,9 @@ func (r *PostgresUserRepository) scanUser(row pgx.Row) (*domain.User, error) {
 	
 	err := row.Scan(
 		&user.UserID,
+		&user.HashedPassword,
 		&user.Email,
 		&user.Alias,
-		&user.HashedPassword,
 		&user.DateJoined,
 	)
 	if err != nil {
@@ -48,7 +48,7 @@ func (r *PostgresUserRepository) GetByPK(ctx context.Context, userID uuid.UUID) 
 	user, err := r.scanUser(row)
 	if err != nil {
 		if err == pgx.ErrNoRows {
-			return nil, fmt.Errorf("user not found: %w", err)
+			return nil, domain.ErrNotFound
 		}
 		return nil, err
 	}
@@ -63,23 +63,20 @@ func (r *PostgresUserRepository) Create(ctx context.Context, req *domain.CreateU
 	}
 	
 	q := `INSERT INTO users (user_id, hashed_password, email, alias, date_joined)
-	VALUES ($1, $2, $3, $4, $5)`
+	VALUES ($1, $2, $3, $4, $5)
+	RETURNING user_id, hashed_password, email, alias, date_joined`
 	
 	now := time.Now()
 	id := uuid.New()
 	
-	row, err := r.db.Query(ctx, q, 
+	row:= r.db.QueryRow(ctx, q, 
 		id,
 		hashedPassword,
 		req.Email,
 		req.Alias,
 		now,
 	)
-	if err != nil {
-		return nil, fmt.Errorf("failed to create new user: %w", err)
-	}
-	
-	defer row.Close()
+
 	user, err := r.scanUser(row)
 	if err != nil {
 		return nil, fmt.Errorf("unable to scan created user: %w", err)
