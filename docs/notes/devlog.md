@@ -1,0 +1,77 @@
+# Dev Log
+
+A running record of what's built, what's decided, and what's next — so picking this
+back up (in a new session or solo) doesn't mean re-deriving everything. Newest entries
+at the top.
+
+For the *why* behind the architecture, see [structure.md](./structure.md). This file is
+the "where are we" companion to that "what are we building" doc.
+
+---
+
+## Status at a glance
+
+| Area | State |
+|------|-------|
+| Project decisions / data model | ✅ Settled (see structure.md) |
+| Local Postgres (Docker) | ✅ Working |
+| Migrations (goose) | ✅ Working — Users table live |
+| DB connection (pgx pool) | ✅ Working |
+| Users repository | ✅ Interface + full Postgres impl, verified |
+| Recipes / Ingredients / Steps / Images | ⬜ Not started |
+| HTTP handlers | ⬜ Not started |
+| Auth (Google OAuth) | ⬜ Not started |
+| Frontend (React) | ⬜ Not started |
+| AWS / Terraform | ⬜ Not started |
+
+---
+
+## 2026-07-03 — Foundations: decisions + Users vertical slice
+
+**Decisions locked in** (full detail in structure.md):
+- Scope trimmed to a **private cookbook** for v1. Comments, ratings, and public/family
+  multi-user are deferred to a "One Day" list.
+- **Auth:** Google OAuth (OIDC) — we store no passwords. Users carry `provider` /
+  `provider_user_id` and a `role` field (the seam for going multi-user later).
+- **Recipes are either/or** via a `RecipeType` discriminator: `structured`
+  (ingredients + steps) or `image` (uploaded photos).
+- **Image uploads normalize** to one web format on the way in; multiple images per
+  recipe, each with a `Position` and an `IsCover` flag.
+- **Stack:** Go stdlib handlers + hand-written repository pattern (no ORM, no sqlc —
+  we want mockable interfaces and full control). Postgres via **pgx/v5**. Migrations
+  via **goose**. React frontend, separate app. Deploy target: ECS Fargate + RDS,
+  all via Terraform.
+
+**Built & verified end-to-end:**
+- Swapped `lib/pq` → `pgx/v5`; connection is now a `pgxpool.Pool`
+  (`internal/database/postgres.go`).
+- First goose migration: `users` table with UUID PK, a unique `(provider,
+  provider_user_id)` pair for OAuth lookups, and sensible defaults.
+- `UserRepository` interface + `UserPostgres` implementation (`Create`, `GetByID`,
+  `GetByProviderUserID`) — hand-written SQL, compile-time interface check.
+- Local dev infra: `docker-compose.yml` (Postgres 17), `.env` / `.env.example`,
+  `.gitignore`, and Makefile targets for db + migrations.
+- Verified the whole loop: `make db-up` → `make migrate-up` → `make run` connects,
+  and column defaults (`gen_random_uuid()`, `role='user'`, `provider='google'`) fire
+  correctly on insert.
+
+**Loose ends noticed (not yet addressed):**
+- CI (`.github/workflows/go-checks.yaml`) pins Go **1.23**, but `go.mod` is **1.25.3**.
+  Worth aligning before it bites.
+- `TimeToCook` is modeled as a free-text string — flexible, but useless for
+  sorting/filtering. Fine for v1.
+- "Exactly one cover image per recipe" isn't enforced yet — plan is a Postgres partial
+  unique index (`UNIQUE (recipe_id) WHERE is_cover`) when we build the Images table.
+
+---
+
+## Next up (pick one)
+
+1. **Recipes vertical** — migrations + repositories for Recipe / Ingredients / Steps /
+   RecipeImage, including the `RecipeType` discriminator and the cover-image constraint.
+2. **HTTP layer** — stdlib handlers over `UserRepository` to start wiring real endpoints.
+3. **Google OAuth** — the login flow that actually populates the users table.
+
+## One Day (deferred on purpose)
+Comments, ratings, family/multi-user, and LLM/OCR (photo → editable structured recipe).
+Tracked in structure.md.

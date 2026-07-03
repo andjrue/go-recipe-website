@@ -1,24 +1,16 @@
-// Package database implements DB connection
+// Package database implements the DB connection.
 package database
 
 import (
-	"database/sql"
+	"context"
 	"fmt"
-	"log"
 	"os"
 
-	_ "github.com/lib/pq"
+	"github.com/jackc/pgx/v5/pgxpool"
 )
 
-type Storage struct {
-	db *sql.DB
-}
-
-func NewPostgresDatabase(db *sql.DB) *Storage {
-	return &Storage{db: db}
-}
-
-func ConnectToPostgres() *sql.DB {
+// ConnectToPostgres builds a connection pool from env config and verifies it with a ping.
+func ConnectToPostgres(ctx context.Context) (*pgxpool.Pool, error) {
 	connStr := fmt.Sprintf("host=%s port=%s user=%s password=%s dbname=%s sslmode=%s",
 		os.Getenv("DB_HOST"),
 		os.Getenv("DB_PORT"),
@@ -27,15 +19,16 @@ func ConnectToPostgres() *sql.DB {
 		os.Getenv("DB_NAME"),
 		os.Getenv("DB_SSLMODE"),
 	)
-	db, err := sql.Open("postgres", connStr)
+
+	pool, err := pgxpool.New(ctx, connStr)
 	if err != nil {
-		log.Fatal(err)
+		return nil, fmt.Errorf("creating pgx pool: %w", err)
 	}
 
-	if err := db.Ping(); err != nil {
-		log.Fatal(err)
+	if err := pool.Ping(ctx); err != nil {
+		pool.Close()
+		return nil, fmt.Errorf("pinging postgres: %w", err)
 	}
 
-	fmt.Println("Successfully connected to postgres")
-	return db
+	return pool, nil
 }

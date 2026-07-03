@@ -26,7 +26,7 @@ and gives the frontend a stable API to consume. Handlers are built on Go's stand
 - Recipes
 - Recipe Steps
 - Ingredients
-- Recipe Image (normalized photo in S3, for `image`-type recipes)
+- Recipe Image (normalized photos in S3, for `image`-type recipes — one or many per recipe)
 
 ## Infrastructure
 
@@ -43,7 +43,7 @@ erDiagram
     User ||--o{ Recipe : creates
     Recipe ||--o{ Ingredients : contains
     Recipe ||--o{ RecipeSteps : has
-    Recipe ||--o| RecipeImage : has
+    Recipe ||--o{ RecipeImage : has
 
     User {
         string UserID PK
@@ -87,6 +87,8 @@ erDiagram
         string S3Key
         string FileName
         int FileSize
+        int Position
+        boolean IsCover
         datetime UploadedAt
     }
 ```
