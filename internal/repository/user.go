@@ -33,21 +33,26 @@ func NewUserPostgres(db *pgxpool.Pool) *UserPostgres {
 	return &UserPostgres{db: db}
 }
 
-// Create inserts the caller-supplied fields and lets Postgres fill the
-// defaulted columns, returning them so the *User comes back fully populated.
+// Create inserts a user and returns the DB-populated fields so the *User comes
+// back fully populated.
 func (r *UserPostgres) Create(ctx context.Context, u *User) (*User, error) {
+	if u.Provider == "" {
+		u.Provider = "google"
+	}
+
 	const query = `
 		INSERT INTO users (email, provider, provider_user_id, alias)
 		VALUES ($1, $2, $3, $4)
-		RETURNING user_id, role, date_joined`
+		RETURNING user_id, provider, role, date_joined`
 
 	err := r.db.QueryRow(ctx, query, u.Email, u.Provider, u.ProviderUserID, u.Alias).Scan(
 		&u.ID,
+		&u.Provider,
 		&u.Role,
 		&u.DateJoined,
 	)
 	if err != nil {
-		return nil, err
+		return nil, translatePostgresError(err)
 	}
 	return u, nil
 }
@@ -70,7 +75,7 @@ func (r *UserPostgres) GetByID(ctx context.Context, id string) (*User, error) {
 		&u.DateJoined,
 	)
 	if err != nil {
-		return nil, err
+		return nil, translatePostgresError(err)
 	}
 	return &u, nil
 }
@@ -94,7 +99,7 @@ func (r *UserPostgres) GetByProviderUserID(ctx context.Context, provider, provid
 		&u.DateJoined,
 	)
 	if err != nil {
-		return nil, err
+		return nil, translatePostgresError(err)
 	}
 	return &u, nil
 }

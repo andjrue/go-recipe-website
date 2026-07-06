@@ -26,6 +26,21 @@ the "where are we" companion to that "what are we building" doc.
 
 ---
 
+## 2026-07-05 — Review cleanup: users foundation
+
+**Adjusted after review:**
+- Removed the early GitHub Actions workflow. We'll add CI back once the repo has a clearer
+  test/build shape.
+- Kept `.env.example` as committed setup documentation with non-secret local defaults.
+- Tightened the users migration: `alias` is now non-null with an empty-string default,
+  `provider` is constrained to `google`, and `role` is constrained to `user` / `admin`.
+- `UserRepository` now maps Postgres/pgx details into shared application errors
+  (`apperror.ErrNotFound`, `apperror.ErrConflict`) so handlers don't need to import pgx.
+- `Create` now defaults an empty provider to `google` in Go before insert, with the DB
+  default still present as a backstop.
+
+---
+
 ## 2026-07-03 — Foundations: decisions + Users vertical slice
 
 **Decisions locked in** (full detail in structure.md):
@@ -56,8 +71,6 @@ the "where are we" companion to that "what are we building" doc.
   correctly on insert.
 
 **Loose ends noticed (not yet addressed):**
-- CI (`.github/workflows/go-checks.yaml`) pins Go **1.23**, but `go.mod` is **1.25.3**.
-  Worth aligning before it bites.
 - `TimeToCook` is modeled as a free-text string — flexible, but useless for
   sorting/filtering. Fine for v1.
 - "Exactly one cover image per recipe" isn't enforced yet — plan is a Postgres partial
