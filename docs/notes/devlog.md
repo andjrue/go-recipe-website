@@ -18,11 +18,22 @@ the "where are we" companion to that "what are we building" doc.
 | Migrations (goose) | ✅ Working — Users table live |
 | DB connection (pgx pool) | ✅ Working |
 | Users repository | ✅ Interface + full Postgres impl, verified |
+| HTTP handlers | ✅ Router + users read handler |
 | Recipes / Ingredients / Steps / Images | ⬜ Not started |
-| HTTP handlers | ⬜ Not started |
 | Auth (Google OAuth) | ⬜ Not started |
 | Frontend (React) | ⬜ Not started |
 | AWS / Terraform | ⬜ Not started |
+
+---
+
+## 2026-07-05 — HTTP foundation: router + users handler
+
+**Built & verified:**
+- Added `internal/api` with a standard-library `http.ServeMux` router.
+- Added `GET /api/health` and `GET /api/users/{id}`.
+- Wired `cmd/main.go` into an HTTP server using `HTTP_ADDR` with a `:8080` default.
+- Added API response helpers and handler tests with a fake `UserRepository`.
+- Documented handler/router conventions in [http.md](./http.md).
 
 ---
 
@@ -82,8 +93,7 @@ the "where are we" companion to that "what are we building" doc.
 
 1. **Recipes vertical** — migrations + repositories for Recipe / Ingredients / Steps /
    RecipeImage, including the `RecipeType` discriminator and the cover-image constraint.
-2. **HTTP layer** — stdlib handlers over `UserRepository` to start wiring real endpoints.
-3. **Google OAuth** — the login flow that actually populates the users table.
+2. **Google OAuth** — the login flow that actually populates the users table.
 
 ## One Day (deferred on purpose)
 Comments, ratings, family/multi-user, and LLM/OCR (photo → editable structured recipe).
