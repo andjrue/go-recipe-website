@@ -1,21 +1,48 @@
 package main
 
 import (
+	"context"
 	"log"
+	"net/http"
+	"os"
+	"time"
+
+	"recipe-website/internal/api"
 	"recipe-website/internal/database"
+	"recipe-website/internal/repository"
 
 	"github.com/joho/godotenv"
 )
 
 func main() {
-
 	if err := godotenv.Load(); err != nil {
-		log.Fatal("error loading env file")
+		log.Println("No .env file loaded; using process environment")
 	}
 
-	db := database.ConnectToPostgres()
-	defer db.Close()
+	ctx := context.Background()
 
-	storage := database.NewPostgresDatabase(db)
-	_ = storage
+	pool, err := database.ConnectToPostgres(ctx)
+	if err != nil {
+		log.Fatal(err)
+	}
+	defer pool.Close()
+
+	// repositories wire onto the pool; handlers will depend on these interfaces
+	users := repository.NewUserPostgres(pool)
+
+	addr := os.Getenv("HTTP_ADDR")
+	if addr == "" {
+		addr = ":8080"
+	}
+
+	server := &http.Server{
+		Addr:              addr,
+		Handler:           api.NewRouter(users),
+		ReadHeaderTimeout: 5 * time.Second,
+	}
+
+	log.Printf("Listening on %s", addr)
+	if err := server.ListenAndServe(); err != nil && err != http.ErrServerClosed {
+		log.Fatal(err)
+	}
 }
