@@ -17,8 +17,20 @@ tidy:
 fmt:
 	go fmt ./...
 
+test:
+	go test ./...
+
+compose-up:
+	docker compose up -d --build
+
 db-up:
-	docker compose up -d
+	docker compose up -d postgres
+
+api-up:
+	docker compose up -d --build api
+
+api-logs:
+	docker compose logs -f api
 
 db-down:
 	docker compose down

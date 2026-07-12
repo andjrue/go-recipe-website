@@ -9,7 +9,7 @@ React frontend (later), deployed to AWS (later).
 ## Requirements
 
 - Go 1.25+
-- Docker (for local Postgres)
+- Docker (for local API + Postgres)
 - [goose](https://github.com/pressly/goose) CLI for migrations:
   `go install github.com/pressly/goose/v3/cmd/goose@latest`
 
@@ -26,8 +26,57 @@ The `.env` holds DB connection config. Everything (app, migrations, docker) read
 ```bash
 make db-up        # start Postgres 17 in Docker (detached)
 make migrate-up   # apply migrations
-make run          # start the app
-make db-down      # stop Postgres when you're done (data persists in a volume)
+make api-up       # build and start the API container
+make db-down      # stop containers when you're done (data persists in a volume)
+```
+
+The API is available at `http://localhost:8080` by default:
+
+```bash
+curl http://localhost:8080/api/health
+```
+
+`make run` still starts the API directly on the host for quick debugging. In Docker Compose,
+the API service connects to Postgres through the internal service name `postgres`; host-run
+migrations keep using the `.env` values.
+
+If something else already owns `localhost:5432`, set `DB_PORT=5433` in `.env` before
+starting Compose and running migrations. The API container will still connect to Postgres on
+the internal Docker port.
+
+## Google auth
+
+Auth uses Google OIDC for identity and a signed HTTP-only cookie for the app session. There
+is no sessions table; any backend container can verify the cookie with `SESSION_SECRET`.
+
+Required `.env` values:
+
+```bash
+GOOGLE_CLIENT_ID=
+GOOGLE_CLIENT_SECRET=
+GOOGLE_REDIRECT_URL=http://localhost:8080/api/auth/google/callback
+ALLOWED_EMAILS=you@example.com,partner@example.com
+SESSION_SECRET=
+SESSION_COOKIE_NAME=recipe_session
+SESSION_COOKIE_SECURE=false
+SESSION_TTL_HOURS=720
+FRONTEND_URL=/api/me
+```
+
+Register `GOOGLE_REDIRECT_URL` as an authorized redirect URI in the Google OAuth client.
+For local API-only testing, keep `FRONTEND_URL=/api/me` so a successful login redirects
+straight to the current-user endpoint.
+
+Test the flow in a browser:
+
+```text
+http://localhost:8080/api/auth/google/login
+```
+
+After Google redirects back, `/api/me` should return the signed-in user JSON. Logout with:
+
+```bash
+curl -i -X POST http://localhost:8080/api/auth/logout
 ```
 
 ## Migrations (goose)
@@ -53,5 +102,9 @@ for the schema.
 | Command | What it does |
 |---------|--------------|
 | `make build` | Compile to `bin/recipe-api` |
+| `make test` | Run Go tests |
 | `make tidy` | `go mod tidy` |
 | `make fmt` | `go fmt ./...` |
+| `make compose-up` | Build/start the API and Postgres containers |
+| `make api-up` | Build/start only the API container and its dependencies |
+| `make api-logs` | Follow API container logs |

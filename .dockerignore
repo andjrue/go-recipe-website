@@ -1,0 +1,11 @@
+.git
+.github
+.agents
+.codex
+.env
+.env.*
+!.env.example
+bin
+tmp
+*.swp
+.DS_Store
