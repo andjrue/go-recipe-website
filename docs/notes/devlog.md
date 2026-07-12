@@ -15,14 +15,35 @@ the "where are we" companion to that "what are we building" doc.
 |------|-------|
 | Project decisions / data model | ✅ Settled (see structure.md) |
 | Local Postgres (Docker) | ✅ Working |
+| Local API (Docker) | ✅ Working |
 | Migrations (goose) | ✅ Working — Users table live |
 | DB connection (pgx pool) | ✅ Working |
 | Users repository | ✅ Interface + full Postgres impl, verified |
 | HTTP handlers | ✅ Router + users read handler |
+| Auth (Google OAuth) | ✅ First pass — Google OIDC + signed cookie session |
 | Recipes / Ingredients / Steps / Images | ⬜ Not started |
-| Auth (Google OAuth) | ⬜ Not started |
 | Frontend (React) | ⬜ Not started |
 | AWS / Terraform | ⬜ Not started |
+
+---
+
+## 2026-07-11 — Dockerized API + Google auth foundation
+
+**Built & verified:**
+- Added a multi-stage Dockerfile for the Go API and wired an `api` service into Compose.
+- Kept Postgres in Compose and configured the API container to connect through the internal
+  `postgres` service name.
+- Added Google OIDC login/callback routes:
+  - `GET /api/auth/google/login`
+  - `GET /api/auth/google/callback`
+- Added signed HTTP-only cookie sessions, `GET /api/me`, and `POST /api/auth/logout`.
+- Added an allowlist via `ALLOWED_EMAILS` so the private cookbook does not allow arbitrary
+  Google accounts.
+- Verified the API container healthcheck and confirmed login returns a Google redirect.
+
+**Local note:**
+- If host port `5432` is already occupied, set `DB_PORT=5433` in `.env`; the API container
+  still reaches Postgres through Docker's internal `5432`.
 
 ---
 

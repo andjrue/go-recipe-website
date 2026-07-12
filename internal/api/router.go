@@ -15,6 +15,12 @@ func NewRouter(users repository.UserRepository) http.Handler {
 	usersHandler := NewUserHandler(users)
 	mux.HandleFunc("GET /api/users/{id}", usersHandler.GetByID)
 
+	authHandler := NewAuthHandlerFromEnv(users)
+	mux.HandleFunc("GET /api/auth/google/login", authHandler.Login)
+	mux.HandleFunc("GET /api/auth/google/callback", authHandler.Callback)
+	mux.HandleFunc("GET /api/me", authHandler.Me)
+	mux.HandleFunc("POST /api/auth/logout", authHandler.Logout)
+
 	return mux
 }
 
