@@ -36,6 +36,8 @@ type AuthHandler struct {
 	codec *securecookie.SecureCookie
 }
 
+type currentUserContextKey struct{}
+
 type authConfig struct {
 	GoogleClientID      string
 	GoogleClientSecret  string
@@ -84,12 +86,19 @@ func newAuthHandler(users repository.UserRepository, cfg authConfig) *AuthHandle
 // RequireAuth protects a route with the same session and allowlist checks used by /api/me.
 func (h *AuthHandler) RequireAuth(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		if _, ok := h.currentUser(w, r); !ok {
+		user, ok := h.currentUser(w, r)
+		if !ok {
 			return
 		}
 
-		next.ServeHTTP(w, r)
+		ctx := context.WithValue(r.Context(), currentUserContextKey{}, user)
+		next.ServeHTTP(w, r.WithContext(ctx))
 	})
+}
+
+func authenticatedUser(r *http.Request) (*repository.User, bool) {
+	user, ok := r.Context().Value(currentUserContextKey{}).(*repository.User)
+	return user, ok && user != nil
 }
 
 func (h *AuthHandler) Login(w http.ResponseWriter, r *http.Request) {

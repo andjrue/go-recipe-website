@@ -16,3 +16,46 @@ type User struct {
 	Role           string
 	DateJoined     time.Time
 }
+
+// Recipe is a cookbook entry. Structured recipes contain ingredients and
+// steps; image recipes contain normalized image metadata.
+type Recipe struct {
+	ID           string
+	Name         string
+	RecipeType   string
+	TimeToCook   string
+	Description  string
+	UserID       string
+	DatePosted   time.Time
+	LastEditedAt time.Time
+	Ingredients  []Ingredient
+	Steps        []RecipeStep
+	Images       []RecipeImage
+}
+
+type Ingredient struct {
+	ID       string
+	RecipeID string
+	Name     string
+	Quantity string
+	Position int
+}
+
+type RecipeStep struct {
+	ID          string
+	RecipeID    string
+	StepNumber  int
+	Instruction string
+}
+
+type RecipeImage struct {
+	ID          string
+	RecipeID    string
+	S3Key       string
+	FileName    string
+	ContentType string
+	FileSize    int64
+	Position    int
+	IsCover     bool
+	UploadedAt  time.Time
+}

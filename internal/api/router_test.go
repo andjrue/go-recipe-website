@@ -26,6 +26,53 @@ type fakeUserRepository struct {
 	getByProviderUserID func(ctx context.Context, provider, providerUserID string) (*repository.User, error)
 }
 
+type fakeRecipeRepository struct {
+	create  func(context.Context, *repository.Recipe) (*repository.Recipe, error)
+	list    func(context.Context) ([]*repository.Recipe, error)
+	getByID func(context.Context, string) (*repository.Recipe, error)
+	update  func(context.Context, *repository.Recipe) (*repository.Recipe, error)
+	delete  func(context.Context, string) error
+}
+
+func (f fakeRecipeRepository) Create(ctx context.Context, recipe *repository.Recipe) (*repository.Recipe, error) {
+	if f.create == nil {
+		return nil, errors.New("not implemented")
+	}
+	return f.create(ctx, recipe)
+}
+
+func (f fakeRecipeRepository) List(ctx context.Context) ([]*repository.Recipe, error) {
+	if f.list == nil {
+		return nil, errors.New("not implemented")
+	}
+	return f.list(ctx)
+}
+
+func (f fakeRecipeRepository) GetByID(ctx context.Context, id string) (*repository.Recipe, error) {
+	if f.getByID == nil {
+		return nil, errors.New("not implemented")
+	}
+	return f.getByID(ctx, id)
+}
+
+func (f fakeRecipeRepository) Update(ctx context.Context, recipe *repository.Recipe) (*repository.Recipe, error) {
+	if f.update == nil {
+		return nil, errors.New("not implemented")
+	}
+	return f.update(ctx, recipe)
+}
+
+func (f fakeRecipeRepository) Delete(ctx context.Context, id string) error {
+	if f.delete == nil {
+		return errors.New("not implemented")
+	}
+	return f.delete(ctx, id)
+}
+
+func newTestRouter(users repository.UserRepository) http.Handler {
+	return NewRouter(users, fakeRecipeRepository{})
+}
+
 func (f fakeUserRepository) Create(ctx context.Context, u *repository.User) (*repository.User, error) {
 	if f.create == nil {
 		return nil, errors.New("not implemented")
@@ -48,7 +95,7 @@ func (f fakeUserRepository) GetByProviderUserID(ctx context.Context, provider, p
 }
 
 func TestHealth(t *testing.T) {
-	router := NewRouter(fakeUserRepository{})
+	router := newTestRouter(fakeUserRepository{})
 
 	req := httptest.NewRequest(http.MethodGet, "/api/health", nil)
 	rec := httptest.NewRecorder()
@@ -73,7 +120,7 @@ func TestGetUserByID(t *testing.T) {
 	configureTestAuth(t)
 	joined := time.Date(2026, 7, 5, 12, 0, 0, 0, time.UTC)
 
-	router := NewRouter(fakeUserRepository{
+	router := newTestRouter(fakeUserRepository{
 		getByID: func(ctx context.Context, id string) (*repository.User, error) {
 			if id == "viewer-1" {
 				return testViewer(), nil
@@ -122,7 +169,7 @@ func TestGetUserByID(t *testing.T) {
 
 func TestGetUserByIDNotFound(t *testing.T) {
 	configureTestAuth(t)
-	router := NewRouter(fakeUserRepository{
+	router := newTestRouter(fakeUserRepository{
 		getByID: func(ctx context.Context, id string) (*repository.User, error) {
 			if id == "viewer-1" {
 				return testViewer(), nil
@@ -142,7 +189,7 @@ func TestGetUserByIDNotFound(t *testing.T) {
 
 func TestGetUserByIDInternalError(t *testing.T) {
 	configureTestAuth(t)
-	router := NewRouter(fakeUserRepository{
+	router := newTestRouter(fakeUserRepository{
 		getByID: func(ctx context.Context, id string) (*repository.User, error) {
 			if id == "viewer-1" {
 				return testViewer(), nil
@@ -162,7 +209,7 @@ func TestGetUserByIDInternalError(t *testing.T) {
 
 func TestGetUserByIDRequiresAuthentication(t *testing.T) {
 	configureTestAuth(t)
-	router := NewRouter(fakeUserRepository{})
+	router := newTestRouter(fakeUserRepository{})
 
 	req := httptest.NewRequest(http.MethodGet, "/api/users/user-1", nil)
 	rec := httptest.NewRecorder()
@@ -173,7 +220,7 @@ func TestGetUserByIDRequiresAuthentication(t *testing.T) {
 }
 
 func TestGetUserByIDUnsupportedMethod(t *testing.T) {
-	router := NewRouter(fakeUserRepository{})
+	router := newTestRouter(fakeUserRepository{})
 
 	req := httptest.NewRequest(http.MethodPost, "/api/users/user-1", nil)
 	rec := httptest.NewRecorder()
@@ -191,7 +238,7 @@ func TestCurrentUserNotConfigured(t *testing.T) {
 	t.Setenv("SESSION_SECRET", "")
 	t.Setenv("ALLOWED_EMAILS", "")
 
-	router := NewRouter(fakeUserRepository{})
+	router := newTestRouter(fakeUserRepository{})
 
 	req := httptest.NewRequest(http.MethodGet, "/api/me", nil)
 	rec := httptest.NewRecorder()

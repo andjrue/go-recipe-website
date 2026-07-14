@@ -7,7 +7,7 @@ import (
 	"recipe-website/internal/repository"
 )
 
-func NewRouter(users repository.UserRepository) http.Handler {
+func NewRouter(users repository.UserRepository, recipes repository.RecipeRepository) http.Handler {
 	mux := http.NewServeMux()
 
 	mux.HandleFunc("GET /api/health", handleHealth)
@@ -15,6 +15,12 @@ func NewRouter(users repository.UserRepository) http.Handler {
 	authHandler := NewAuthHandlerFromEnv(users)
 	usersHandler := NewUserHandler(users)
 	mux.Handle("GET /api/users/{id}", authHandler.RequireAuth(http.HandlerFunc(usersHandler.GetByID)))
+	recipesHandler := NewRecipeHandler(recipes)
+	mux.Handle("GET /api/recipes", authHandler.RequireAuth(http.HandlerFunc(recipesHandler.List)))
+	mux.Handle("POST /api/recipes", authHandler.RequireAuth(http.HandlerFunc(recipesHandler.Create)))
+	mux.Handle("GET /api/recipes/{id}", authHandler.RequireAuth(http.HandlerFunc(recipesHandler.GetByID)))
+	mux.Handle("PUT /api/recipes/{id}", authHandler.RequireAuth(http.HandlerFunc(recipesHandler.Update)))
+	mux.Handle("DELETE /api/recipes/{id}", authHandler.RequireAuth(http.HandlerFunc(recipesHandler.Delete)))
 
 	mux.HandleFunc("GET /api/auth/google/login", authHandler.Login)
 	mux.HandleFunc("GET /api/auth/google/callback", authHandler.Callback)

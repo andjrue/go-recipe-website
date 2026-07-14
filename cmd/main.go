@@ -29,6 +29,7 @@ func main() {
 
 	// repositories wire onto the pool; handlers will depend on these interfaces
 	users := repository.NewUserPostgres(pool)
+	recipes := repository.NewRecipePostgres(pool)
 
 	addr := os.Getenv("HTTP_ADDR")
 	if addr == "" {
@@ -37,7 +38,7 @@ func main() {
 
 	server := &http.Server{
 		Addr:              addr,
-		Handler:           api.NewRouter(users),
+		Handler:           api.NewRouter(users, recipes),
 		ReadHeaderTimeout: 5 * time.Second,
 	}
 
