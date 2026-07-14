@@ -6,6 +6,7 @@ import (
 	"encoding/base64"
 	"errors"
 	"fmt"
+	"log"
 	"net/http"
 	"os"
 	"strconv"
@@ -25,6 +26,7 @@ const (
 	defaultGoogleRedirectURL = "http://localhost:8080/api/auth/google/callback"
 	defaultSessionCookieName = "recipe_session"
 	defaultSessionTTL        = 30 * 24 * time.Hour
+	minimumSessionSecretSize = 32
 	stateCookieName          = "recipe_oauth_state"
 )
 
@@ -48,7 +50,6 @@ type authConfig struct {
 
 type sessionPayload struct {
 	UserID    string `json:"userId"`
-	Email     string `json:"email"`
 	ExpiresAt int64  `json:"expiresAt"`
 }
 
@@ -65,7 +66,10 @@ type googleUserInfo struct {
 }
 
 func NewAuthHandlerFromEnv(users repository.UserRepository) *AuthHandler {
-	cfg := newAuthConfigFromEnv()
+	return newAuthHandler(users, newAuthConfigFromEnv())
+}
+
+func newAuthHandler(users repository.UserRepository, cfg authConfig) *AuthHandler {
 	if cfg.SessionSecret == "" {
 		return &AuthHandler{users: users, cfg: cfg}
 	}
@@ -73,23 +77,36 @@ func NewAuthHandlerFromEnv(users repository.UserRepository) *AuthHandler {
 	return &AuthHandler{
 		users: users,
 		cfg:   cfg,
-		codec: securecookie.New([]byte(cfg.SessionSecret), nil),
+		codec: securecookie.New([]byte(cfg.SessionSecret), nil).MaxAge(int(cfg.SessionTTL.Seconds())),
 	}
 }
 
+// RequireAuth protects a route with the same session and allowlist checks used by /api/me.
+func (h *AuthHandler) RequireAuth(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if _, ok := h.currentUser(w, r); !ok {
+			return
+		}
+
+		next.ServeHTTP(w, r)
+	})
+}
+
 func (h *AuthHandler) Login(w http.ResponseWriter, r *http.Request) {
-	if !h.configured() {
+	if !h.oauthConfigured() {
 		writeError(w, http.StatusServiceUnavailable, "auth_not_configured")
 		return
 	}
 
 	state, err := randomToken(32)
 	if err != nil {
+		log.Printf("generating oauth state: %v", err)
 		writeError(w, http.StatusInternalServerError, "internal_error")
 		return
 	}
 
 	if err := h.setStateCookie(w, state); err != nil {
+		log.Printf("setting oauth state cookie: %v", err)
 		writeError(w, http.StatusInternalServerError, "internal_error")
 		return
 	}
@@ -99,7 +116,7 @@ func (h *AuthHandler) Login(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *AuthHandler) Callback(w http.ResponseWriter, r *http.Request) {
-	if !h.configured() {
+	if !h.oauthConfigured() {
 		writeError(w, http.StatusServiceUnavailable, "auth_not_configured")
 		return
 	}
@@ -124,6 +141,7 @@ func (h *AuthHandler) Callback(w http.ResponseWriter, r *http.Request) {
 
 	googleUser, err := h.exchangeGoogleUser(r.Context(), code)
 	if err != nil {
+		log.Printf("exchanging google identity: %v", err)
 		writeError(w, http.StatusUnauthorized, "invalid_google_token")
 		return
 	}
@@ -144,11 +162,13 @@ func (h *AuthHandler) Callback(w http.ResponseWriter, r *http.Request) {
 			writeError(w, http.StatusConflict, "account_conflict")
 			return
 		}
+		log.Printf("finding or creating user: %v", err)
 		writeError(w, http.StatusInternalServerError, "internal_error")
 		return
 	}
 
 	if err := h.setSessionCookie(w, user); err != nil {
+		log.Printf("setting session cookie: %v", err)
 		writeError(w, http.StatusInternalServerError, "internal_error")
 		return
 	}
@@ -175,7 +195,7 @@ func (h *AuthHandler) Logout(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *AuthHandler) currentUser(w http.ResponseWriter, r *http.Request) (*repository.User, bool) {
-	if !h.configured() {
+	if !h.sessionConfigured() {
 		writeError(w, http.StatusServiceUnavailable, "auth_not_configured")
 		return nil, false
 	}
@@ -203,21 +223,34 @@ func (h *AuthHandler) currentUser(w http.ResponseWriter, r *http.Request) (*repo
 			writeError(w, http.StatusUnauthorized, "unauthorized")
 			return nil, false
 		}
+		log.Printf("loading current user: %v", err)
 		writeError(w, http.StatusInternalServerError, "internal_error")
+		return nil, false
+	}
+
+	if !h.emailAllowed(user.Email) {
+		h.clearSessionCookie(w)
+		writeError(w, http.StatusUnauthorized, "unauthorized")
 		return nil, false
 	}
 
 	return user, true
 }
 
-func (h *AuthHandler) configured() bool {
+func (h *AuthHandler) sessionConfigured() bool {
 	return h.users != nil &&
 		h.codec != nil &&
+		h.cfg.SessionCookieName != "" &&
+		h.cfg.SessionTTL > 0 &&
+		len(h.cfg.SessionSecret) >= minimumSessionSecretSize &&
+		len(h.cfg.AllowedEmails) > 0
+}
+
+func (h *AuthHandler) oauthConfigured() bool {
+	return h.sessionConfigured() &&
 		h.cfg.GoogleClientID != "" &&
 		h.cfg.GoogleClientSecret != "" &&
-		h.cfg.GoogleRedirectURL != "" &&
-		h.cfg.SessionCookieName != "" &&
-		h.cfg.SessionTTL > 0
+		h.cfg.GoogleRedirectURL != ""
 }
 
 func (h *AuthHandler) oauthConfig() oauth2.Config {
@@ -287,19 +320,27 @@ func (h *AuthHandler) findOrCreateUser(ctx context.Context, googleUser googleUse
 		alias = googleUser.Email
 	}
 
-	return h.users.Create(ctx, &repository.User{
+	createdUser, err := h.users.Create(ctx, &repository.User{
 		Email:          googleUser.Email,
 		Provider:       "google",
 		ProviderUserID: googleUser.Subject,
 		Alias:          alias,
 	})
+	if !errors.Is(err, apperror.ErrConflict) {
+		return createdUser, err
+	}
+
+	// Two callbacks for a new identity can race between lookup and insert. If
+	// this identity now exists, treat the competing insert as a successful login.
+	user, lookupErr := h.users.GetByProviderUserID(ctx, "google", googleUser.Subject)
+	if lookupErr == nil {
+		return user, nil
+	}
+
+	return nil, err
 }
 
 func (h *AuthHandler) emailAllowed(email string) bool {
-	if len(h.cfg.AllowedEmails) == 0 {
-		return true
-	}
-
 	_, ok := h.cfg.AllowedEmails[strings.ToLower(email)]
 	return ok
 }
@@ -307,7 +348,6 @@ func (h *AuthHandler) emailAllowed(email string) bool {
 func (h *AuthHandler) setSessionCookie(w http.ResponseWriter, user *repository.User) error {
 	session := sessionPayload{
 		UserID:    user.ID,
-		Email:     user.Email,
 		ExpiresAt: time.Now().Add(h.cfg.SessionTTL).Unix(),
 	}
 

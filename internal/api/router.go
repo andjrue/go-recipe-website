@@ -12,10 +12,10 @@ func NewRouter(users repository.UserRepository) http.Handler {
 
 	mux.HandleFunc("GET /api/health", handleHealth)
 
-	usersHandler := NewUserHandler(users)
-	mux.HandleFunc("GET /api/users/{id}", usersHandler.GetByID)
-
 	authHandler := NewAuthHandlerFromEnv(users)
+	usersHandler := NewUserHandler(users)
+	mux.Handle("GET /api/users/{id}", authHandler.RequireAuth(http.HandlerFunc(usersHandler.GetByID)))
+
 	mux.HandleFunc("GET /api/auth/google/login", authHandler.Login)
 	mux.HandleFunc("GET /api/auth/google/callback", authHandler.Callback)
 	mux.HandleFunc("GET /api/me", authHandler.Me)

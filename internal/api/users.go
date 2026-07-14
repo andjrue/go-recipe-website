@@ -14,13 +14,17 @@ type UserHandler struct {
 }
 
 type userResponse struct {
-	ID             string    `json:"id"`
-	Email          string    `json:"email"`
-	Provider       string    `json:"provider"`
-	ProviderUserID string    `json:"providerUserID"`
-	Alias          string    `json:"alias"`
-	Role           string    `json:"role"`
-	DateJoined     time.Time `json:"dateJoined"`
+	ID         string    `json:"id"`
+	Email      string    `json:"email"`
+	Alias      string    `json:"alias"`
+	Role       string    `json:"role"`
+	DateJoined time.Time `json:"dateJoined"`
+}
+
+type userSummaryResponse struct {
+	ID         string    `json:"id"`
+	Alias      string    `json:"alias"`
+	DateJoined time.Time `json:"dateJoined"`
 }
 
 func NewUserHandler(users repository.UserRepository) *UserHandler {
@@ -39,17 +43,23 @@ func (h *UserHandler) GetByID(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	writeJSON(w, http.StatusOK, newUserResponse(user))
+	writeJSON(w, http.StatusOK, newUserSummaryResponse(user))
 }
 
 func newUserResponse(user *repository.User) userResponse {
 	return userResponse{
-		ID:             user.ID,
-		Email:          user.Email,
-		Provider:       user.Provider,
-		ProviderUserID: user.ProviderUserID,
-		Alias:          user.Alias,
-		Role:           user.Role,
-		DateJoined:     user.DateJoined,
+		ID:         user.ID,
+		Email:      user.Email,
+		Alias:      user.Alias,
+		Role:       user.Role,
+		DateJoined: user.DateJoined,
+	}
+}
+
+func newUserSummaryResponse(user *repository.User) userSummaryResponse {
+	return userSummaryResponse{
+		ID:         user.ID,
+		Alias:      user.Alias,
+		DateJoined: user.DateJoined,
 	}
 }

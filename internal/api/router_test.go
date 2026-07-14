@@ -11,6 +11,13 @@ import (
 
 	"recipe-website/internal/apperror"
 	"recipe-website/internal/repository"
+
+	"github.com/gorilla/securecookie"
+)
+
+const (
+	testSessionSecret = "01234567890123456789012345678901"
+	testViewerEmail   = "viewer@example.com"
 )
 
 type fakeUserRepository struct {
@@ -63,10 +70,14 @@ func TestHealth(t *testing.T) {
 }
 
 func TestGetUserByID(t *testing.T) {
+	configureTestAuth(t)
 	joined := time.Date(2026, 7, 5, 12, 0, 0, 0, time.UTC)
 
 	router := NewRouter(fakeUserRepository{
 		getByID: func(ctx context.Context, id string) (*repository.User, error) {
+			if id == "viewer-1" {
+				return testViewer(), nil
+			}
 			if id != "user-1" {
 				t.Fatalf("id = %q, want user-1", id)
 			}
@@ -84,6 +95,7 @@ func TestGetUserByID(t *testing.T) {
 	})
 
 	req := httptest.NewRequest(http.MethodGet, "/api/users/user-1", nil)
+	addTestSession(t, req, "viewer-1")
 	rec := httptest.NewRecorder()
 
 	router.ServeHTTP(rec, req)
@@ -92,7 +104,7 @@ func TestGetUserByID(t *testing.T) {
 		t.Fatalf("status = %d, want %d", rec.Code, http.StatusOK)
 	}
 
-	var body userResponse
+	var body userSummaryResponse
 	if err := json.NewDecoder(rec.Body).Decode(&body); err != nil {
 		t.Fatalf("decoding response: %v", err)
 	}
@@ -100,8 +112,8 @@ func TestGetUserByID(t *testing.T) {
 	if body.ID != "user-1" {
 		t.Fatalf("id = %q, want user-1", body.ID)
 	}
-	if body.Email != "drew@example.com" {
-		t.Fatalf("email = %q, want drew@example.com", body.Email)
+	if body.Alias != "Drew" {
+		t.Fatalf("alias = %q, want Drew", body.Alias)
 	}
 	if !body.DateJoined.Equal(joined) {
 		t.Fatalf("dateJoined = %v, want %v", body.DateJoined, joined)
@@ -109,13 +121,18 @@ func TestGetUserByID(t *testing.T) {
 }
 
 func TestGetUserByIDNotFound(t *testing.T) {
+	configureTestAuth(t)
 	router := NewRouter(fakeUserRepository{
 		getByID: func(ctx context.Context, id string) (*repository.User, error) {
+			if id == "viewer-1" {
+				return testViewer(), nil
+			}
 			return nil, apperror.ErrNotFound
 		},
 	})
 
 	req := httptest.NewRequest(http.MethodGet, "/api/users/missing", nil)
+	addTestSession(t, req, "viewer-1")
 	rec := httptest.NewRecorder()
 
 	router.ServeHTTP(rec, req)
@@ -124,18 +141,35 @@ func TestGetUserByIDNotFound(t *testing.T) {
 }
 
 func TestGetUserByIDInternalError(t *testing.T) {
+	configureTestAuth(t)
 	router := NewRouter(fakeUserRepository{
 		getByID: func(ctx context.Context, id string) (*repository.User, error) {
+			if id == "viewer-1" {
+				return testViewer(), nil
+			}
 			return nil, errors.New("db down")
 		},
 	})
+
+	req := httptest.NewRequest(http.MethodGet, "/api/users/user-1", nil)
+	addTestSession(t, req, "viewer-1")
+	rec := httptest.NewRecorder()
+
+	router.ServeHTTP(rec, req)
+
+	assertErrorResponse(t, rec, http.StatusInternalServerError, "internal_error")
+}
+
+func TestGetUserByIDRequiresAuthentication(t *testing.T) {
+	configureTestAuth(t)
+	router := NewRouter(fakeUserRepository{})
 
 	req := httptest.NewRequest(http.MethodGet, "/api/users/user-1", nil)
 	rec := httptest.NewRecorder()
 
 	router.ServeHTTP(rec, req)
 
-	assertErrorResponse(t, rec, http.StatusInternalServerError, "internal_error")
+	assertErrorResponse(t, rec, http.StatusUnauthorized, "unauthorized")
 }
 
 func TestGetUserByIDUnsupportedMethod(t *testing.T) {
@@ -155,6 +189,7 @@ func TestCurrentUserNotConfigured(t *testing.T) {
 	t.Setenv("GOOGLE_CLIENT_ID", "")
 	t.Setenv("GOOGLE_CLIENT_SECRET", "")
 	t.Setenv("SESSION_SECRET", "")
+	t.Setenv("ALLOWED_EMAILS", "")
 
 	router := NewRouter(fakeUserRepository{})
 
@@ -164,6 +199,38 @@ func TestCurrentUserNotConfigured(t *testing.T) {
 	router.ServeHTTP(rec, req)
 
 	assertErrorResponse(t, rec, http.StatusServiceUnavailable, "auth_not_configured")
+}
+
+func configureTestAuth(t *testing.T) {
+	t.Helper()
+	t.Setenv("GOOGLE_CLIENT_ID", "test-client")
+	t.Setenv("GOOGLE_CLIENT_SECRET", "test-client-secret")
+	t.Setenv("SESSION_SECRET", testSessionSecret)
+	t.Setenv("ALLOWED_EMAILS", testViewerEmail)
+}
+
+func addTestSession(t *testing.T, req *http.Request, userID string) {
+	t.Helper()
+
+	codec := securecookie.New([]byte(testSessionSecret), nil).MaxAge(int(defaultSessionTTL.Seconds()))
+	value, err := codec.Encode(defaultSessionCookieName, sessionPayload{
+		UserID:    userID,
+		ExpiresAt: time.Now().Add(time.Hour).Unix(),
+	})
+	if err != nil {
+		t.Fatalf("encoding test session: %v", err)
+	}
+
+	req.AddCookie(&http.Cookie{Name: defaultSessionCookieName, Value: value})
+}
+
+func testViewer() *repository.User {
+	return &repository.User{
+		ID:    "viewer-1",
+		Email: testViewerEmail,
+		Alias: "Viewer",
+		Role:  "user",
+	}
 }
 
 func assertErrorResponse(t *testing.T, rec *httptest.ResponseRecorder, wantStatus int, wantCode string) {

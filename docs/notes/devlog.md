@@ -20,12 +20,27 @@ the "where are we" companion to that "what are we building" doc.
 | DB connection (pgx pool) | ✅ Working |
 | Users repository | ✅ Interface + full Postgres impl, verified |
 | HTTP handlers | ✅ Router + users read handler |
-| Auth (Google OAuth) | ✅ First pass — Google OIDC + signed cookie session |
+| Auth (Google OAuth) | ✅ Hardened first pass — OIDC + allowlist + signed session |
 | Recipes / Ingredients / Steps / Images | ⬜ Not started |
 | Frontend (React) | ⬜ Not started |
 | AWS / Terraform | ⬜ Not started |
 
 ---
+
+## 2026-07-13 — Auth boundary hardening
+
+**Built and verified:**
+- Protected `GET /api/users/{id}` with the signed-session check and reduced its response to
+  non-sensitive profile fields.
+- Made private access fail closed: auth stays unavailable when `ALLOWED_EMAILS` is empty or
+  `SESSION_SECRET` is shorter than 32 characters.
+- Recheck the allowlist on authenticated requests so removing an email also invalidates its
+  existing sessions.
+- Aligned securecookie's internal maximum age with `SESSION_TTL_HOURS` and handled concurrent
+  first-login inserts without returning a false account conflict.
+- Added focused tests for configuration, OAuth state, cookie flags, invalid and expired
+  sessions, allowlist revocation, protected routes, and repository failures.
+- Verified with `go test ./...`, the race detector, and `go vet ./...`.
 
 ## 2026-07-11 — Dockerized API + Google auth foundation
 

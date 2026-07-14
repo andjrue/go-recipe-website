@@ -63,6 +63,10 @@ SESSION_TTL_HOURS=720
 FRONTEND_URL=/api/me
 ```
 
+`ALLOWED_EMAILS` is required and authentication stays disabled when it is empty. Use a
+random `SESSION_SECRET` of at least 32 characters. In production, also set
+`SESSION_COOKIE_SECURE=true` and serve the API over HTTPS.
+
 Register `GOOGLE_REDIRECT_URL` as an authorized redirect URI in the Google OAuth client.
 For local API-only testing, keep `FRONTEND_URL=/api/me` so a successful login redirects
 straight to the current-user endpoint.
