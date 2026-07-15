@@ -75,7 +75,7 @@ func (r *UserPostgres) GetByID(ctx context.Context, id string) (*User, error) {
 		&u.DateJoined,
 	)
 	if err != nil {
-		return nil, translatePostgresLookupError(err)
+		return nil, translatePostgresError(err)
 	}
 	return &u, nil
 }

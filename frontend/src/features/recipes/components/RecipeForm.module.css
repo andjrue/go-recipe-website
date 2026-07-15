@@ -1,0 +1,10 @@
+.form { display: grid; gap: 4rem; }
+.basics { display: grid; gap: 1.25rem; }
+.basics label { display: grid; gap: 0.4rem; }
+.basics label > span { color: var(--ink-muted); font-size: 0.75rem; font-weight: 800; }
+.basics > label:first-child input { padding: 0.2rem 0 0.55rem; border: 0; border-bottom: 1px solid var(--line-strong); border-radius: 0; background: transparent; font: 500 clamp(2rem, 5vw, 3.8rem) var(--serif); }
+.pair { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; }
+.footer { display: flex; justify-content: flex-end; align-items: center; gap: 1rem; padding-top: 2rem; border-top: 1px solid var(--line); }
+.footer p { margin: 0 auto 0 0; color: var(--danger); }
+.footer button { padding: 0.85rem 1.4rem; border-radius: 999px; background: var(--terracotta); color: white; font-weight: 800; }
+@media (max-width: 580px) { .pair { grid-template-columns: 1fr; } .footer { align-items: stretch; flex-direction: column; } }

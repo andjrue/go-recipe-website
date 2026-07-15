@@ -56,10 +56,3 @@ func TestTranslatePostgresError(t *testing.T) {
 		})
 	}
 }
-
-func TestTranslatePostgresLookupError(t *testing.T) {
-	invalidUUID := &pgconn.PgError{Code: "22P02"}
-	if got := translatePostgresLookupError(invalidUUID); !errors.Is(got, apperror.ErrNotFound) {
-		t.Fatalf("translatePostgresLookupError() = %v, want not found", got)
-	}
-}

@@ -1,7 +1,7 @@
 # go-recipe-website
 
 A private, shared cookbook. Go backend (repository pattern over Postgres, pgx driver),
-React frontend (later), deployed to AWS (later).
+React frontend, deployed to AWS (later).
 
 - **Architecture & data model:** [docs/notes/structure.md](docs/notes/structure.md)
 - **Progress / dev log:** [docs/notes/devlog.md](docs/notes/devlog.md)
@@ -10,6 +10,7 @@ React frontend (later), deployed to AWS (later).
 
 - Go 1.25+
 - Docker (for local API + Postgres)
+- Node.js 22+ and npm
 - [goose](https://github.com/pressly/goose) CLI for migrations:
   `go install github.com/pressly/goose/v3/cmd/goose@latest`
 
@@ -27,6 +28,8 @@ The `.env` holds DB connection config. Everything (app, migrations, docker) read
 make db-up        # start Postgres 17 in Docker (detached)
 make migrate-up   # apply migrations
 make api-up       # build and start the API container
+make frontend-install
+make frontend-dev # start the UI at http://localhost:5173
 make db-down      # stop containers when you're done (data persists in a volume)
 ```
 
@@ -43,6 +46,13 @@ migrations keep using the `.env` values.
 If something else already owns `localhost:5432`, set `DB_PORT=5433` in `.env` before
 starting Compose and running migrations. The API container will still connect to Postgres on
 the internal Docker port.
+
+The frontend development server proxies `/api` requests to `http://localhost:8080`, so the
+browser does not need separate CORS configuration. For the browser login flow, set:
+
+```bash
+FRONTEND_URL=http://localhost:5173/recipes
+```
 
 ## Google auth
 
@@ -109,6 +119,9 @@ for the schema.
 | `make test` | Run Go tests |
 | `make tidy` | `go mod tidy` |
 | `make fmt` | `go fmt ./...` |
+| `make frontend-dev` | Start the React development server |
+| `make frontend-test` | Run the Vitest suite |
+| `make frontend-build` | Type-check and build the frontend |
 | `make compose-up` | Build/start the API and Postgres containers |
 | `make api-up` | Build/start only the API container and its dependencies |
 | `make api-logs` | Follow API container logs |

@@ -1,0 +1,15 @@
+.fieldset { border: 0; padding: 0; margin: 0; }
+.fieldset legend { padding: 0; color: var(--ink); font: 500 2rem var(--serif); }
+.fieldset legend span { margin-right: 0.75rem; color: var(--terracotta); font: italic 1rem var(--serif); }
+.fieldset > p { margin: 0.35rem 0 1.5rem; color: var(--ink-muted); }
+.rows { display: grid; gap: 0.75rem; }
+.ingredientRow { display: grid; grid-template-columns: minmax(7rem, 0.35fr) minmax(12rem, 1fr) auto; gap: 0.75rem; align-items: end; }
+.stepRow { display: grid; grid-template-columns: 2rem 1fr auto; gap: 0.75rem; align-items: start; }
+.stepRow b { padding-top: 2.2rem; color: var(--terracotta); font: italic 1rem var(--serif); }
+.ingredientRow label, .stepRow label { display: grid; gap: 0.35rem; }
+.ingredientRow label span, .stepRow label span { color: var(--ink-muted); font-size: 0.75rem; font-weight: 700; }
+.ingredientRow button, .stepRow button { width: 2.5rem; height: 2.5rem; margin-bottom: 0.15rem; border-radius: 50%; background: transparent; color: var(--ink-muted); font-size: 1.25rem; }
+.stepRow button { margin-top: 1.75rem; }
+.ingredientRow button:disabled, .stepRow button:disabled { opacity: 0.25; }
+.add { margin-top: 1rem; padding: 0.55rem 0; background: transparent; color: var(--terracotta); font-weight: 800; }
+@media (max-width: 580px) { .ingredientRow { grid-template-columns: 1fr 2fr auto; } .ingredientRow label span { display: none; } }

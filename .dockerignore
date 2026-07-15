@@ -7,5 +7,6 @@
 !.env.example
 bin
 tmp
+frontend
 *.swp
 .DS_Store

@@ -22,10 +22,23 @@ the "where are we" companion to that "what are we building" doc.
 | HTTP handlers | ✅ Router + users read handler |
 | Auth (Google OAuth) | ✅ Hardened first pass — OIDC + allowlist + signed session |
 | Recipes / Ingredients / Steps / Images | ⬜ Not started |
-| Frontend (React) | ⬜ Not started |
+| Frontend (React) | 🟨 First usable slice — auth + structured recipe CRUD |
 | AWS / Terraform | ⬜ Not started |
 
 ---
+
+## 2026-07-13 — React cookbook UI foundation
+
+**Built and verified:**
+- Added a React, TypeScript, Vite, and Vitest frontend under `frontend/`.
+- Organized it by feature: app routing, auth state, recipe APIs/types/components/pages, shared
+  HTTP behavior, and layout components have explicit boundaries.
+- Added login/session handling and protected routes.
+- Added recipe collection, detail, create, and edit pages with reusable card and form
+  components. Ingredients and method steps have focused dynamic-list editors.
+- Added a Vite `/api` proxy for local development without backend CORS configuration.
+- Added behavior tests for session routing and structured-recipe form payloads.
+- Verified frontend tests, type-check/build, lint, live Vite serving, and proxied API health.
 
 ## 2026-07-13 — Auth boundary hardening
 

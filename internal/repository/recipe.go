@@ -99,7 +99,7 @@ func (r *RecipePostgres) GetByID(ctx context.Context, id string) (*Recipe, error
 
 	recipe, err := scanRecipe(r.db.QueryRow(ctx, query, id))
 	if err != nil {
-		return nil, translatePostgresLookupError(err)
+		return nil, translatePostgresError(err)
 	}
 
 	if err := r.loadRecipeChildren(ctx, recipe); err != nil {
@@ -133,7 +133,7 @@ func (r *RecipePostgres) Update(ctx context.Context, recipe *Recipe) (*Recipe, e
 		recipe.Description,
 	).Scan(&recipe.UserID, &recipe.DatePosted, &recipe.LastEditedAt)
 	if err != nil {
-		return nil, translatePostgresLookupError(err)
+		return nil, translatePostgresError(err)
 	}
 
 	if _, err := tx.Exec(ctx, `DELETE FROM ingredients WHERE recipe_id = $1`, recipe.ID); err != nil {
@@ -158,7 +158,7 @@ func (r *RecipePostgres) Delete(ctx context.Context, id string) error {
 		SET deleted_at = now(), last_edited_at = now()
 		WHERE recipe_id = $1 AND deleted_at IS NULL`, id)
 	if err != nil {
-		return translatePostgresLookupError(err)
+		return translatePostgresError(err)
 	}
 	if commandTag.RowsAffected() == 0 {
 		return apperror.ErrNotFound

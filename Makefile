@@ -20,6 +20,18 @@ fmt:
 test:
 	go test ./...
 
+frontend-install:
+	npm --prefix frontend install
+
+frontend-dev:
+	npm --prefix frontend run dev
+
+frontend-test:
+	npm --prefix frontend test
+
+frontend-build:
+	npm --prefix frontend run build
+
 compose-up:
 	docker compose up -d --build
 
