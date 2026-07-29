@@ -1,5 +1,6 @@
 APP_NAME=recipe-api
 MIGRATIONS_DIR=internal/database/migrations
+BACKUP_DIR=backups
 
 # pull DB_* vars in from .env if present (dash = don't fail when missing)
 -include .env
@@ -46,6 +47,16 @@ api-logs:
 
 db-down:
 	docker compose down
+
+db-backup:
+	mkdir -p $(BACKUP_DIR)
+	docker compose exec -T postgres pg_dump --username $(DB_USER) --dbname $(DB_NAME) --format=custom > $(BACKUP_DIR)/recipe-$$(date +%Y%m%d-%H%M%S).dump
+
+images-backup:
+	mkdir -p $(BACKUP_DIR)
+	docker compose exec -T api tar -czf - -C /data images > $(BACKUP_DIR)/images-$$(date +%Y%m%d-%H%M%S).tar.gz
+
+backup: db-backup images-backup
 
 migrate-up:
 	goose -dir $(MIGRATIONS_DIR) postgres $(GOOSE_DBSTRING) up

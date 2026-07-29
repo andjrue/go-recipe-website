@@ -52,14 +52,15 @@ type recipeResponse struct {
 }
 
 type recipeSummaryResponse struct {
-	ID           string    `json:"id"`
-	Name         string    `json:"name"`
-	RecipeType   string    `json:"recipeType"`
-	TimeToCook   string    `json:"timeToCook"`
-	Description  string    `json:"description"`
-	UserID       string    `json:"userID"`
-	DatePosted   time.Time `json:"datePosted"`
-	LastEditedAt time.Time `json:"lastEditedAt"`
+	ID            string    `json:"id"`
+	Name          string    `json:"name"`
+	RecipeType    string    `json:"recipeType"`
+	TimeToCook    string    `json:"timeToCook"`
+	Description   string    `json:"description"`
+	UserID        string    `json:"userID"`
+	DatePosted    time.Time `json:"datePosted"`
+	LastEditedAt  time.Time `json:"lastEditedAt"`
+	CoverImageURL string    `json:"coverImageURL,omitempty"`
 }
 
 type ingredientResponse struct {
@@ -83,6 +84,7 @@ type imageResponse struct {
 	Position    int       `json:"position"`
 	IsCover     bool      `json:"isCover"`
 	UploadedAt  time.Time `json:"uploadedAt"`
+	URL         string    `json:"url"`
 }
 
 func NewRecipeHandler(recipes repository.RecipeRepository) *RecipeHandler {
@@ -105,7 +107,10 @@ func (h *RecipeHandler) List(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *RecipeHandler) GetByID(w http.ResponseWriter, r *http.Request) {
-	id := r.PathValue("id")
+	id, ok := recipeIDFromRequest(w, r)
+	if !ok {
+		return
+	}
 	recipe, err := h.recipes.GetByID(r.Context(), id)
 	if err != nil {
 		writeRepositoryError(w, "getting recipe", err)
@@ -144,19 +149,8 @@ func (h *RecipeHandler) Create(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *RecipeHandler) Update(w http.ResponseWriter, r *http.Request) {
-	id := r.PathValue("id")
-	user, ok := authenticatedUser(r)
-	if !ok {
-		writeError(w, http.StatusInternalServerError, "internal_error")
-		return
-	}
-	existing, err := h.recipes.GetByID(r.Context(), id)
-	if err != nil {
-		writeRepositoryError(w, "loading recipe for update", err)
-		return
-	}
-	if existing.UserID != user.ID && user.Role != "admin" {
-		writeError(w, http.StatusForbidden, "forbidden")
+	id, validID := recipeIDFromRequest(w, r)
+	if !validID {
 		return
 	}
 
@@ -180,19 +174,8 @@ func (h *RecipeHandler) Update(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *RecipeHandler) Delete(w http.ResponseWriter, r *http.Request) {
-	id := r.PathValue("id")
-	user, ok := authenticatedUser(r)
-	if !ok {
-		writeError(w, http.StatusInternalServerError, "internal_error")
-		return
-	}
-	existing, err := h.recipes.GetByID(r.Context(), id)
-	if err != nil {
-		writeRepositoryError(w, "loading recipe for delete", err)
-		return
-	}
-	if existing.UserID != user.ID && user.Role != "admin" {
-		writeError(w, http.StatusForbidden, "forbidden")
+	id, validID := recipeIDFromRequest(w, r)
+	if !validID {
 		return
 	}
 
@@ -229,20 +212,21 @@ func (request recipeRequest) newRecipe() (*repository.Recipe, string) {
 	if request.Name == "" || len(request.Name) > 200 {
 		return nil, "invalid_name"
 	}
-	if request.RecipeType != "structured" {
-		if request.RecipeType == "image" {
-			return nil, "image_upload_not_supported"
-		}
+	if request.RecipeType != "structured" && request.RecipeType != "image" {
 		return nil, "invalid_recipe_type"
 	}
 	if len(request.TimeToCook) > 100 || len(request.Description) > 10_000 {
 		return nil, "invalid_recipe"
 	}
-	if len(request.Ingredients) == 0 || len(request.Ingredients) > 200 {
-		return nil, "invalid_ingredients"
-	}
-	if len(request.Steps) == 0 || len(request.Steps) > 100 {
-		return nil, "invalid_steps"
+	if request.RecipeType == "structured" {
+		if len(request.Ingredients) == 0 || len(request.Ingredients) > 200 {
+			return nil, "invalid_ingredients"
+		}
+		if len(request.Steps) == 0 || len(request.Steps) > 100 {
+			return nil, "invalid_steps"
+		}
+	} else if len(request.Ingredients) != 0 || len(request.Steps) != 0 {
+		return nil, "invalid_image_recipe"
 	}
 
 	recipe := &repository.Recipe{
@@ -300,17 +284,22 @@ func newRecipeResponse(recipe *repository.Recipe) recipeResponse {
 		response.Images = append(response.Images, imageResponse{
 			ID: image.ID, FileName: image.FileName, ContentType: image.ContentType, FileSize: image.FileSize,
 			Position: image.Position, IsCover: image.IsCover, UploadedAt: image.UploadedAt,
+			URL: "/api/recipe-images/" + image.ID,
 		})
 	}
 	return response
 }
 
 func newRecipeSummaryResponse(recipe *repository.Recipe) recipeSummaryResponse {
-	return recipeSummaryResponse{
+	response := recipeSummaryResponse{
 		ID: recipe.ID, Name: recipe.Name, RecipeType: recipe.RecipeType,
 		TimeToCook: recipe.TimeToCook, Description: recipe.Description, UserID: recipe.UserID,
 		DatePosted: recipe.DatePosted, LastEditedAt: recipe.LastEditedAt,
 	}
+	if recipe.CoverImageID != "" {
+		response.CoverImageURL = "/api/recipe-images/" + recipe.CoverImageID
+	}
+	return response
 }
 
 func writeRepositoryError(w http.ResponseWriter, action string, err error) {

@@ -32,7 +32,13 @@ func NewUserHandler(users repository.UserRepository) *UserHandler {
 }
 
 func (h *UserHandler) GetByID(w http.ResponseWriter, r *http.Request) {
-	user, err := h.users.GetByID(r.Context(), r.PathValue("id"))
+	id := r.PathValue("id")
+	if !isUUID(id) {
+		writeError(w, http.StatusBadRequest, "invalid_id")
+		return
+	}
+
+	user, err := h.users.GetByID(r.Context(), id)
 	if err != nil {
 		if errors.Is(err, apperror.ErrNotFound) {
 			writeError(w, http.StatusNotFound, "not_found")

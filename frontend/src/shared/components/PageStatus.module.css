@@ -13,3 +13,7 @@
 .status h1 { color: var(--ink); font-size: clamp(1.6rem, 4vw, 2.4rem); }
 .status p { max-width: 32rem; }
 .mark { color: var(--terracotta); font-size: 1.8rem; }
+@media (max-width: 580px) {
+  .status { min-height: 55svh; padding: 2rem 1rem; }
+  .status h1 { font-size: 1.75rem; }
+}

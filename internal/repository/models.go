@@ -28,6 +28,7 @@ type Recipe struct {
 	UserID       string
 	DatePosted   time.Time
 	LastEditedAt time.Time
+	CoverImageID string
 	Ingredients  []Ingredient
 	Steps        []RecipeStep
 	Images       []RecipeImage

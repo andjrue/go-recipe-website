@@ -1,7 +1,12 @@
-import { render, screen } from '@testing-library/react'
+import { cleanup, render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
-import { expect, it, vi } from 'vitest'
+import { afterEach, expect, it, vi } from 'vitest'
 import { RecipeForm } from './RecipeForm'
+
+afterEach(() => {
+  cleanup()
+  vi.restoreAllMocks()
+})
 
 it('builds an ordered structured recipe payload', async () => {
   const user = userEvent.setup()
@@ -29,5 +34,29 @@ it('builds an ordered structured recipe payload', async () => {
       { name: 'Salt', quantity: 'to taste' },
     ],
     steps: [{ instruction: 'Simmer everything.' }],
-  })
+  }, [])
+})
+
+it('builds an image recipe from a phone or library photo', async () => {
+  const user = userEvent.setup()
+  const onSubmit = vi.fn().mockResolvedValue(undefined)
+  Object.defineProperty(URL, 'createObjectURL', { configurable: true, value: vi.fn(() => 'blob:preview') })
+  Object.defineProperty(URL, 'revokeObjectURL', { configurable: true, value: vi.fn() })
+  render(<RecipeForm submitLabel="Add to cookbook" onSubmit={onSubmit} />)
+
+  await user.type(screen.getByLabelText('Recipe name'), 'Grandma’s recipe card')
+  await user.click(screen.getByRole('button', { name: 'Use photos' }))
+  const photo = new File(['image'], 'card.jpg', { type: 'image/jpeg' })
+  await user.upload(screen.getByLabelText('Choose photos'), photo)
+  await user.click(screen.getByRole('button', { name: 'Add to cookbook' }))
+
+  expect(onSubmit).toHaveBeenCalledWith({
+    name: 'Grandma’s recipe card',
+    recipeType: 'image',
+    timeToCook: '',
+    description: '',
+    ingredients: [],
+    steps: [],
+  }, [photo])
+  expect(screen.getByAltText('New recipe upload 1')).toHaveAttribute('src', 'blob:preview')
 })

@@ -1,5 +1,5 @@
 import { apiRequest } from '../../shared/api/client'
-import type { Recipe, RecipeInput, RecipeSummary } from './types'
+import type { Recipe, RecipeImage, RecipeInput, RecipeSummary } from './types'
 
 export const recipeApi = {
   list: () => apiRequest<RecipeSummary[]>('/api/recipes'),
@@ -9,4 +9,13 @@ export const recipeApi = {
   update: (id: string, recipe: RecipeInput) =>
     apiRequest<Recipe>(`/api/recipes/${id}`, { method: 'PUT', body: JSON.stringify(recipe) }),
   remove: (id: string) => apiRequest<void>(`/api/recipes/${id}`, { method: 'DELETE' }),
+  uploadImage: (id: string, image: File) => {
+    const body = new FormData()
+    body.append('image', image)
+    return apiRequest<RecipeImage>(`/api/recipes/${id}/images`, { method: 'POST', body })
+  },
+  deleteImage: (recipeID: string, imageID: string) =>
+    apiRequest<void>(`/api/recipes/${recipeID}/images/${imageID}`, { method: 'DELETE' }),
+  setCoverImage: (recipeID: string, imageID: string) =>
+    apiRequest<void>(`/api/recipes/${recipeID}/images/${imageID}/cover`, { method: 'PUT' }),
 }

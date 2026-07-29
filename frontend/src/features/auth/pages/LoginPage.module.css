@@ -8,11 +8,19 @@
 .eyebrow { color: var(--terracotta); text-transform: uppercase; letter-spacing: 0.16em; font-size: 0.76rem; font-weight: 700; }
 .card h1 { margin: 1rem 0 1.25rem; font: 500 clamp(3rem, 7vw, 6rem)/0.96 var(--serif); letter-spacing: -0.045em; }
 .card p { color: var(--ink-muted); max-width: 34rem; font-size: 1.08rem; line-height: 1.7; }
-.login { display: inline-flex; margin-top: 2.25rem; padding: 0.85rem 1.25rem; border-radius: 999px; background: var(--ink); color: white; font-weight: 700; }
+.login { min-height: 3rem; display: inline-flex; align-items: center; justify-content: center; margin-top: 2.25rem; padding: 0.85rem 1.25rem; border-radius: 999px; background: var(--ink); color: white; font-weight: 700; }
 .card small { display: block; margin-top: 1rem; color: var(--ink-faint); }
 .note { margin: 2rem; padding: clamp(2rem, 5vw, 5rem); display: flex; flex-direction: column; justify-content: flex-end; background: var(--sage); border-radius: 0.5rem; color: #f9f4e9; }
 .note span { text-transform: uppercase; letter-spacing: 0.16em; font-size: 0.7rem; opacity: 0.7; }
 .note strong { margin-top: 1rem; font: 400 clamp(2rem, 4vw, 3.8rem)/1.05 var(--serif); }
 .rule { height: 1px; margin: 3rem 0 1.25rem; background: rgb(255 255 255 / 0.35); }
 .note em { font-family: var(--serif); }
-@media (max-width: 760px) { .page { grid-template-columns: 1fr; } .note { display: none; } .card { padding: 2rem; } }
+@media (max-width: 760px) {
+  .page { grid-template-columns: 1fr; min-height: 100svh; }
+  .note { display: none; }
+  .card { width: 100%; max-width: 32rem; padding: max(2rem, env(safe-area-inset-top)) 1.25rem max(2rem, env(safe-area-inset-bottom)); }
+  .card h1 { font-size: clamp(2.75rem, 15vw, 4.5rem); }
+  .card p { font-size: 1rem; line-height: 1.6; }
+  .login { width: 100%; margin-top: 1.75rem; }
+  .card small { text-align: center; }
+}

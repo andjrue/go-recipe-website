@@ -13,11 +13,12 @@ export class ApiError extends Error {
 }
 
 export async function apiRequest<T>(path: string, options?: RequestInit): Promise<T> {
+	const hasJSONBody = Boolean(options?.body) && !(options?.body instanceof FormData)
   const response = await fetch(path, {
     credentials: 'include',
     ...options,
     headers: {
-      ...(options?.body ? { 'Content-Type': 'application/json' } : {}),
+      ...(hasJSONBody ? { 'Content-Type': 'application/json' } : {}),
       ...options?.headers,
     },
   })

@@ -7,8 +7,10 @@ export function RecipeCard({ recipe }: { recipe: RecipeSummary }) {
     <article className={styles.card}>
       <Link to={`/recipes/${recipe.id}`} aria-label={`View ${recipe.name}`}>
         <div className={styles.visual}>
-          <span>{recipe.recipeType === 'image' ? 'Recipe card' : 'From the kitchen'}</span>
-          <b>{recipe.name.slice(0, 1).toUpperCase()}</b>
+          {recipe.coverImageURL ? <img src={recipe.coverImageURL} alt="" loading="lazy" /> : <>
+            <span>{recipe.recipeType === 'image' ? 'Recipe card' : 'From the kitchen'}</span>
+            <b>{recipe.name.slice(0, 1).toUpperCase()}</b>
+          </>}
         </div>
         <div className={styles.body}>
           <div className={styles.meta}>{recipe.timeToCook || 'Time not listed'}</div>

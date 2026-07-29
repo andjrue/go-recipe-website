@@ -5,12 +5,14 @@ import (
 	"net/http"
 
 	"recipe-website/internal/repository"
+	"recipe-website/internal/storage"
 )
 
-func NewRouter(users repository.UserRepository, recipes repository.RecipeRepository) http.Handler {
+func NewRouter(users repository.UserRepository, recipes repository.RecipeRepository, health HealthChecker, images storage.ImageStore) http.Handler {
 	mux := http.NewServeMux()
 
 	mux.HandleFunc("GET /api/health", handleHealth)
+	mux.HandleFunc("GET /api/ready", handleReady(health))
 
 	authHandler := NewAuthHandlerFromEnv(users)
 	usersHandler := NewUserHandler(users)
@@ -21,6 +23,11 @@ func NewRouter(users repository.UserRepository, recipes repository.RecipeReposit
 	mux.Handle("GET /api/recipes/{id}", authHandler.RequireAuth(http.HandlerFunc(recipesHandler.GetByID)))
 	mux.Handle("PUT /api/recipes/{id}", authHandler.RequireAuth(http.HandlerFunc(recipesHandler.Update)))
 	mux.Handle("DELETE /api/recipes/{id}", authHandler.RequireAuth(http.HandlerFunc(recipesHandler.Delete)))
+	imagesHandler := NewImageHandler(recipes, images)
+	mux.Handle("POST /api/recipes/{id}/images", authHandler.RequireAuth(http.HandlerFunc(imagesHandler.Upload)))
+	mux.Handle("GET /api/recipe-images/{id}", authHandler.RequireAuth(http.HandlerFunc(imagesHandler.Serve)))
+	mux.Handle("DELETE /api/recipes/{recipeID}/images/{imageID}", authHandler.RequireAuth(http.HandlerFunc(imagesHandler.Delete)))
+	mux.Handle("PUT /api/recipes/{recipeID}/images/{imageID}/cover", authHandler.RequireAuth(http.HandlerFunc(imagesHandler.SetCover)))
 
 	mux.HandleFunc("GET /api/auth/google/login", authHandler.Login)
 	mux.HandleFunc("GET /api/auth/google/callback", authHandler.Callback)
@@ -28,8 +35,4 @@ func NewRouter(users repository.UserRepository, recipes repository.RecipeReposit
 	mux.HandleFunc("POST /api/auth/logout", authHandler.Logout)
 
 	return mux
-}
-
-func handleHealth(w http.ResponseWriter, r *http.Request) {
-	writeJSON(w, http.StatusOK, map[string]string{"status": "ok"})
 }

@@ -9,6 +9,7 @@ import (
 	"time"
 
 	"recipe-website/internal/apperror"
+	"recipe-website/internal/database"
 
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/joho/godotenv"
@@ -18,7 +19,7 @@ func TestRecipePostgresLifecycle(t *testing.T) {
 	if os.Getenv("RUN_DATABASE_INTEGRATION") == "" {
 		t.Skip("set RUN_DATABASE_INTEGRATION=1 to run against local Postgres")
 	}
-	if err := godotenv.Load("../../.env"); err != nil {
+	if err := godotenv.Load("../../.env"); err != nil && os.Getenv("DB_HOST") == "" {
 		t.Fatalf("loading test database environment: %v", err)
 	}
 
@@ -43,6 +44,9 @@ func TestRecipePostgresLifecycle(t *testing.T) {
 	defer pool.Close()
 	if err := pool.Ping(ctx); err != nil {
 		t.Fatalf("pinging test database: %v", err)
+	}
+	if err := database.Migrate(ctx, pool); err != nil {
+		t.Fatalf("applying test migrations: %v", err)
 	}
 
 	users := NewUserPostgres(pool)
@@ -88,6 +92,32 @@ func TestRecipePostgresLifecycle(t *testing.T) {
 	}
 	if len(loaded.Ingredients) != 1 || len(loaded.Steps) != 1 || loaded.Ingredients[0].Name != "Tomatoes" {
 		t.Fatalf("loaded recipe children = %#v", loaded)
+	}
+
+	firstImage, err := recipes.AddImage(ctx, created.ID, &RecipeImage{
+		S3Key: fmt.Sprintf("integration-%d-one.jpg", unique), FileName: "one.jpg", ContentType: "image/jpeg", FileSize: 100,
+	})
+	if err != nil {
+		t.Fatalf("adding first recipe image: %v", err)
+	}
+	secondImage, err := recipes.AddImage(ctx, created.ID, &RecipeImage{
+		S3Key: fmt.Sprintf("integration-%d-two.jpg", unique), FileName: "two.jpg", ContentType: "image/jpeg", FileSize: 200,
+	})
+	if err != nil {
+		t.Fatalf("adding second recipe image: %v", err)
+	}
+	if !firstImage.IsCover || secondImage.IsCover || secondImage.Position != 1 {
+		t.Fatalf("initial image ordering = %#v, %#v", firstImage, secondImage)
+	}
+	if err := recipes.SetCoverImage(ctx, created.ID, secondImage.ID); err != nil {
+		t.Fatalf("setting recipe cover: %v", err)
+	}
+	if _, err := recipes.DeleteImage(ctx, created.ID, firstImage.ID); err != nil {
+		t.Fatalf("deleting first recipe image: %v", err)
+	}
+	remainingImage, err := recipes.GetImage(ctx, secondImage.ID)
+	if err != nil || remainingImage.Position != 0 || !remainingImage.IsCover {
+		t.Fatalf("remaining image = %#v, error = %v", remainingImage, err)
 	}
 
 	loaded.Name = "Updated Integration Soup"

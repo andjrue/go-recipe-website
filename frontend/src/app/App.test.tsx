@@ -37,5 +37,39 @@ describe('App', () => {
 
     expect(await screen.findByRole('heading', { name: 'The cookbook is ready.' })).toBeInTheDocument()
     expect(screen.getByText('Cook')).toBeInTheDocument()
+    const navigation = screen.getByRole('navigation', { name: 'Main navigation' })
+    expect(navigation).toContainElement(screen.getByRole('link', { name: 'Recipes' }))
+    expect(navigation).toContainElement(screen.getByRole('link', { name: 'Add recipe' }))
+  })
+
+  it('allows either cook to edit a shared recipe', async () => {
+    window.history.replaceState({}, '', '/recipes/11111111-1111-4111-8111-111111111111')
+    vi.stubGlobal('fetch', vi.fn((input: string | URL | Request) => {
+      const path = input.toString()
+      if (path === '/api/me') {
+        return jsonResponse({ id: 'user-1', email: 'cook@example.com', alias: 'Cook', role: 'user', dateJoined: '2026-07-13T00:00:00Z' })
+      }
+      if (path.includes('/api/recipes/')) {
+        return jsonResponse({
+          id: '11111111-1111-4111-8111-111111111111',
+          name: 'Shared soup',
+          recipeType: 'structured',
+          timeToCook: '30 minutes',
+          description: '',
+          userID: 'other-user',
+          datePosted: '2026-07-13T00:00:00Z',
+          lastEditedAt: '2026-07-13T00:00:00Z',
+          ingredients: [{ id: 'ingredient-1', name: 'Tomatoes', quantity: '4', position: 0 }],
+          steps: [{ id: 'step-1', instruction: 'Simmer.', stepNumber: 1 }],
+          images: [],
+        })
+      }
+      return jsonResponse({ error: 'not_found' }, 404)
+    }))
+
+    render(<App />)
+
+    expect(await screen.findByRole('heading', { name: 'Shared soup' })).toBeInTheDocument()
+    expect(screen.getByRole('link', { name: 'Edit' })).toHaveAttribute('href', '/recipes/11111111-1111-4111-8111-111111111111/edit')
   })
 })

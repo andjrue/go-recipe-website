@@ -20,6 +20,7 @@ export type RecipeSummary = {
   userID: string
   datePosted: string
   lastEditedAt: string
+  coverImageURL?: string
 }
 
 export type Recipe = RecipeSummary & {
@@ -36,11 +37,12 @@ export type RecipeImage = {
   position: number
   isCover: boolean
   uploadedAt: string
+  url: string
 }
 
 export type RecipeInput = {
   name: string
-  recipeType: 'structured'
+  recipeType: 'structured' | 'image'
   timeToCook: string
   description: string
   ingredients: { name: string; quantity: string }[]

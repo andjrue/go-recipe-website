@@ -5,6 +5,8 @@
 
 # build output
 /bin/
+/backups/
+/data/
 
 # editor / OS
 *.swp

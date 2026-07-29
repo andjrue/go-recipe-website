@@ -8,8 +8,18 @@
 .stepRow b { padding-top: 2.2rem; color: var(--terracotta); font: italic 1rem var(--serif); }
 .ingredientRow label, .stepRow label { display: grid; gap: 0.35rem; }
 .ingredientRow label span, .stepRow label span { color: var(--ink-muted); font-size: 0.75rem; font-weight: 700; }
-.ingredientRow button, .stepRow button { width: 2.5rem; height: 2.5rem; margin-bottom: 0.15rem; border-radius: 50%; background: transparent; color: var(--ink-muted); font-size: 1.25rem; }
+.ingredientRow button, .stepRow button { width: 2.75rem; height: 2.75rem; margin-bottom: 0.05rem; border-radius: 50%; background: transparent; color: var(--ink-muted); font-size: 1.25rem; }
 .stepRow button { margin-top: 1.75rem; }
 .ingredientRow button:disabled, .stepRow button:disabled { opacity: 0.25; }
-.add { margin-top: 1rem; padding: 0.55rem 0; background: transparent; color: var(--terracotta); font-weight: 800; }
-@media (max-width: 580px) { .ingredientRow { grid-template-columns: 1fr 2fr auto; } .ingredientRow label span { display: none; } }
+.add { min-height: 2.75rem; margin-top: 1rem; padding: 0.55rem 0; background: transparent; color: var(--terracotta); font-weight: 800; }
+@media (max-width: 580px) {
+  .fieldset legend { font-size: 1.8rem; }
+  .rows { gap: 1rem; }
+  .ingredientRow { position: relative; grid-template-columns: minmax(6.5rem, 0.55fr) minmax(0, 1fr); gap: 0.5rem; padding-right: 2.75rem; }
+  .ingredientRow button { position: absolute; right: -0.25rem; bottom: 0; }
+  .stepRow { position: relative; grid-template-columns: minmax(0, 1fr); padding-right: 2.75rem; }
+  .stepRow b { display: none; }
+  .stepRow button { position: absolute; right: -0.25rem; bottom: 0; margin: 0; }
+  .ingredientRow input, .stepRow textarea { padding: 0.75rem 0.65rem; }
+  .add { width: 100%; text-align: left; }
+}

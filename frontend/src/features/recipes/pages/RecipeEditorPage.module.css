@@ -3,3 +3,9 @@
 .page header a { color: var(--ink-muted); font-weight: 700; font-size: 0.85rem; }
 .page header span { display: block; margin-top: 3rem; color: var(--terracotta); text-transform: uppercase; letter-spacing: 0.14em; font-size: 0.7rem; font-weight: 800; }
 .page header h1 { margin: 0.5rem 0 0; font: 500 clamp(2.8rem, 6vw, 5rem)/1 var(--serif); letter-spacing: -0.04em; }
+@media (max-width: 580px) {
+  .page header { margin-bottom: 2rem; }
+  .page header a { min-height: 2.75rem; display: inline-flex; align-items: center; }
+  .page header span { margin-top: 1.5rem; }
+  .page header h1 { font-size: 2.65rem; line-height: 0.98; }
+}

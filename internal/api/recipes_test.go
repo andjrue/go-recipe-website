@@ -21,7 +21,7 @@ const (
 
 func TestRecipeRoutesRequireAuthentication(t *testing.T) {
 	configureTestAuth(t)
-	router := NewRouter(fakeUserRepository{}, fakeRecipeRepository{})
+	router := NewRouter(fakeUserRepository{}, fakeRecipeRepository{}, fakeHealthChecker{}, nil)
 
 	for _, test := range []struct {
 		method string
@@ -32,6 +32,10 @@ func TestRecipeRoutesRequireAuthentication(t *testing.T) {
 		{method: http.MethodGet, path: "/api/recipes/" + testRecipeID},
 		{method: http.MethodPut, path: "/api/recipes/" + testRecipeID},
 		{method: http.MethodDelete, path: "/api/recipes/" + testRecipeID},
+		{method: http.MethodPost, path: "/api/recipes/" + testRecipeID + "/images"},
+		{method: http.MethodGet, path: "/api/recipe-images/" + testImageID},
+		{method: http.MethodDelete, path: "/api/recipes/" + testRecipeID + "/images/" + testImageID},
+		{method: http.MethodPut, path: "/api/recipes/" + testRecipeID + "/images/" + testImageID + "/cover"},
 	} {
 		t.Run(test.method+" "+test.path, func(t *testing.T) {
 			req := httptest.NewRequest(test.method, test.path, nil)
@@ -121,11 +125,6 @@ func TestCreateRecipeValidation(t *testing.T) {
 			body:     `{"name":"Soup","recipeType":"structured","ingredients":[{"name":"Salt"}],"steps":[]}`,
 			wantCode: "invalid_steps",
 		},
-		{
-			name:     "image recipe waits for upload flow",
-			body:     `{"name":"Grandma's card","recipeType":"image"}`,
-			wantCode: "image_upload_not_supported",
-		},
 	}
 
 	for _, tt := range tests {
@@ -139,6 +138,29 @@ func TestCreateRecipeValidation(t *testing.T) {
 
 			assertErrorResponse(t, rec, http.StatusBadRequest, tt.wantCode)
 		})
+	}
+}
+
+func TestCreateImageRecipe(t *testing.T) {
+	configureTestAuth(t)
+	recipes := fakeRecipeRepository{
+		create: func(_ context.Context, recipe *repository.Recipe) (*repository.Recipe, error) {
+			if recipe.RecipeType != "image" || len(recipe.Ingredients) != 0 || len(recipe.Steps) != 0 {
+				t.Fatalf("unexpected image recipe: %#v", recipe)
+			}
+			recipe.ID = testRecipeID
+			return recipe, nil
+		},
+	}
+	router := newAuthenticatedRecipeRouter(recipes, "user")
+	req := httptest.NewRequest(http.MethodPost, "/api/recipes", strings.NewReader(`{"name":"Grandma's card","recipeType":"image"}`))
+	addTestSession(t, req, "viewer-1")
+	rec := httptest.NewRecorder()
+
+	router.ServeHTTP(rec, req)
+
+	if rec.Code != http.StatusCreated {
+		t.Fatalf("status = %d, want %d; body=%s", rec.Code, http.StatusCreated, rec.Body.String())
 	}
 }
 
@@ -170,48 +192,29 @@ func TestListRecipes(t *testing.T) {
 	}
 }
 
-func TestUpdateRecipeAuthorization(t *testing.T) {
+func TestEitherUserCanUpdateRecipe(t *testing.T) {
 	configureTestAuth(t)
 	body := `{"name":"Soup","recipeType":"structured","ingredients":[{"name":"Salt"}],"steps":[{"instruction":"Mix"}]}`
-
-	tests := []struct {
-		name       string
-		role       string
-		ownerID    string
-		wantStatus int
-	}{
-		{name: "owner", role: "user", ownerID: "viewer-1", wantStatus: http.StatusOK},
-		{name: "admin", role: "admin", ownerID: otherUserID, wantStatus: http.StatusOK},
-		{name: "other user", role: "user", ownerID: otherUserID, wantStatus: http.StatusForbidden},
+	updateCalled := false
+	recipes := fakeRecipeRepository{
+		update: func(ctx context.Context, recipe *repository.Recipe) (*repository.Recipe, error) {
+			updateCalled = true
+			recipe.UserID = otherUserID
+			return recipe, nil
+		},
 	}
+	router := newAuthenticatedRecipeRouter(recipes, "user")
+	req := httptest.NewRequest(http.MethodPut, "/api/recipes/"+testRecipeID, strings.NewReader(body))
+	addTestSession(t, req, "viewer-1")
+	rec := httptest.NewRecorder()
 
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			updateCalled := false
-			recipes := fakeRecipeRepository{
-				getByID: func(ctx context.Context, id string) (*repository.Recipe, error) {
-					return &repository.Recipe{ID: id, UserID: tt.ownerID}, nil
-				},
-				update: func(ctx context.Context, recipe *repository.Recipe) (*repository.Recipe, error) {
-					updateCalled = true
-					recipe.UserID = tt.ownerID
-					return recipe, nil
-				},
-			}
-			router := newAuthenticatedRecipeRouter(recipes, tt.role)
-			req := httptest.NewRequest(http.MethodPut, "/api/recipes/"+testRecipeID, strings.NewReader(body))
-			addTestSession(t, req, "viewer-1")
-			rec := httptest.NewRecorder()
+	router.ServeHTTP(rec, req)
 
-			router.ServeHTTP(rec, req)
-
-			if rec.Code != tt.wantStatus {
-				t.Fatalf("status = %d, want %d; body=%s", rec.Code, tt.wantStatus, rec.Body.String())
-			}
-			if updateCalled != (tt.wantStatus == http.StatusOK) {
-				t.Fatalf("update called = %v", updateCalled)
-			}
-		})
+	if rec.Code != http.StatusOK {
+		t.Fatalf("status = %d, want %d; body=%s", rec.Code, http.StatusOK, rec.Body.String())
+	}
+	if !updateCalled {
+		t.Fatal("update was not called for a recipe owned by the other user")
 	}
 }
 
@@ -219,9 +222,6 @@ func TestDeleteRecipe(t *testing.T) {
 	configureTestAuth(t)
 	deletedID := ""
 	recipes := fakeRecipeRepository{
-		getByID: func(ctx context.Context, id string) (*repository.Recipe, error) {
-			return &repository.Recipe{ID: id, UserID: "viewer-1"}, nil
-		},
 		delete: func(ctx context.Context, id string) error {
 			deletedID = id
 			return nil
@@ -259,6 +259,29 @@ func TestRecipeNotFound(t *testing.T) {
 	assertErrorResponse(t, rec, http.StatusNotFound, "not_found")
 }
 
+func TestRecipeRoutesRejectInvalidID(t *testing.T) {
+	configureTestAuth(t)
+	recipes := fakeRecipeRepository{
+		getByID: func(context.Context, string) (*repository.Recipe, error) {
+			t.Fatal("repository should not be called for an invalid ID")
+			return nil, nil
+		},
+	}
+	router := newAuthenticatedRecipeRouter(recipes, "user")
+
+	for _, method := range []string{http.MethodGet, http.MethodPut, http.MethodDelete} {
+		t.Run(method, func(t *testing.T) {
+			req := httptest.NewRequest(method, "/api/recipes/not-a-uuid", nil)
+			addTestSession(t, req, "viewer-1")
+			rec := httptest.NewRecorder()
+
+			router.ServeHTTP(rec, req)
+
+			assertErrorResponse(t, rec, http.StatusBadRequest, "invalid_id")
+		})
+	}
+}
+
 func TestListRecipesRepositoryFailure(t *testing.T) {
 	configureTestAuth(t)
 	recipes := fakeRecipeRepository{
@@ -282,5 +305,5 @@ func newAuthenticatedRecipeRouter(recipes repository.RecipeRepository, role stri
 			return &repository.User{ID: id, Email: testViewerEmail, Alias: "Viewer", Role: role}, nil
 		},
 	}
-	return NewRouter(users, recipes)
+	return NewRouter(users, recipes, fakeHealthChecker{}, nil)
 }
